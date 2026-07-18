@@ -192,3 +192,78 @@ pair<vi, vi> divmod(const vi &a, const vi &b) {
 }
 
 ```
+
+### 2.最大流
+```cpp
+
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+const ll INF=1e18;
+const int N=205;
+struct edge{
+    int to,rev;
+    ll cap;
+};
+vector<edge>adj[N];
+int iter[N];
+int dep[N];
+void add(int u,int v,ll w){
+    adj[u].push_back({v,(int)adj[v].size(),w});
+    adj[v].push_back({u,(int)adj[u].size()-1,0});
+}
+bool bfs(int s,int t){
+    memset(dep,-1,sizeof(dep));
+    queue<int>que;
+    que.push(s);
+    dep[s]=0;
+    while(!que.empty()){
+        int x=que.front();
+        que.pop();
+        for(edge &a:adj[x]){
+            if(a.cap>0&&dep[a.to]==-1){
+                dep[a.to]=dep[x]+1;
+                que.push(a.to);
+            }
+        }
+    }
+    return dep[t]!=-1;
+}
+ll dfs(int cur,int t,ll f){
+    if(cur==t)return f;
+    while(iter[cur]<adj[cur].size()){
+        edge &a=adj[cur][iter[cur]];
+        if(a.cap>0&&dep[a.to]>dep[cur]){
+            ll c=dfs(a.to,t,min(f,a.cap));
+            if(c>0){
+                a.cap-=c;
+                adj[a.to][a.rev].cap+=c;
+                return c;
+            }
+        }
+        iter[cur]++;
+    }
+    return 0;
+}
+ll max_flow(int s,int t){
+    ll c=0;
+    while(bfs(s,t)){
+        memset(iter,0,sizeof(iter));
+        ll f;
+        while(f=dfs(s,t,INF))c+=f;
+    }
+    return c;
+}
+int main(){
+    int n,m,s,t;
+    cin>>n>>m>>s>>t;
+    for(int i=0;i<m;i++){
+        int u,v;
+        ll w;
+        cin>>u>>v>>w;
+        add(u,v,w);
+    }
+    cout<<max_flow(s,t);
+}
+
+```
