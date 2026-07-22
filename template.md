@@ -3,8 +3,15 @@
 # 目录
 
 ## 一.准备
+### 1.火车头
+### 2.高精度
 
+## 二.图论
+### 1.最大流
 
+## 三.字符串
+### 1.KMP
+### 2.马拉车
 
 
 
@@ -266,4 +273,75 @@ int main(){
     cout<<max_flow(s,t);
 }
 
+```
+
+## 三.字符串
+### 1.KMP
+```cpp
+//前缀数组
+vector<int> pre(string s){
+    int l=s.size();
+    vector<int>pi(l,0);
+    for(int i=1;i<l;i++){
+        int j=pi[i-1];
+        while(j>0&&s[i]!=s[j])j=pi[j-1];
+        if(s[i]==s[j])j++;
+        pi[i]=j;
+    }
+    return pi;
+}
+//KMP 匹配：在主串 S 中查找模式串 P，返回所有匹配的起始索引（0-based）
+vector<int>kmp(string s,string p){
+    vector<int>res;
+    int n=s.size(),m=p.size();
+    if(m==0||n<m)return res;
+    vector<int> pi=pre(p);
+    int j=0;
+    for(int i=0;i<n;i++){
+        while(j>0&&s[i]!=p[j])j=pi[j-1];
+        if(s[i]==p[j])j++;
+        if(j==m){
+            res.push_back(i-m+1);// 起始索引=主串当前位置-模式串长度+1
+            j=pi[j-1];
+        }
+    }
+    return res;
+}
+```
+### 2.马拉车
+```cpp
+// 马拉车算法核心：返回原字符串的最长回文子串
+string manacher(string s){
+    if(s.empty())return "";
+    string t="^#";
+    for(char c:s){
+        t+=c;
+        t+="#";
+    }
+    t+="$";
+    int n=t.size();
+    vector<int>p(n,0);
+    int c=0;// 当前最右回文的中心
+    int r=0;// 当前最右回文的右边界（R = C + P[C]，回文不包含 R 位置）
+    for(int i=1;i<n-1;i++){
+        int mirror=2*c-i;
+        if(i<r)p[i]=min(r-i,p[mirror]);
+        while(t[i+p[i]+1]==t[i-(p[i]+1)])p[i]++;
+        if(i+p[i]>r){
+            c=i;
+            r=i+p[i];
+        }
+    }
+    int max_len=0;
+    int center_idx = 0; 
+    for (int i = 1; i < n - 1; ++i) {
+        if (p[i] > max_len) {
+            max_len = p[i];
+            center_idx = i;
+        }
+    }
+    // 原字符串起始索引 = (预处理中心索引 - 最长回文半径) / 2
+    int start = (center_idx - max_len) / 2;
+    return s.substr(start, max_len);
+}
 ```
