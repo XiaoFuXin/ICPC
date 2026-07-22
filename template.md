@@ -13,7 +13,8 @@
 ### 1.KMP
 ### 2.马拉车
 
-
+## 四.数据结构
+### 1.带权并查集
 
 
 ## 一.准备
@@ -343,5 +344,30 @@ string manacher(string s){
     // 原字符串起始索引 = (预处理中心索引 - 最长回文半径) / 2
     int start = (center_idx - max_len) / 2;
     return s.substr(start, max_len);
+}
+```
+
+## 四.数据结构
+### 1.带权并查集
+```cpp
+int find(int x){
+    if(fa[x]==x)return x;
+    int old=fa[x];
+    int root=find(old);
+    weight[x]+=weight[old];
+    return fa[x]=root;
+}
+// 定义关系：val[x] - val[y] = w
+// 返回 true 表示矛盾
+bool unite(int x,int y,int w){
+    int rx=find(x);
+    int ry=find(y);
+    // 检查 val[x] - val[y] 是否等于 w
+    if(rx==ry)return (weight[x]-weight[y])!=w;
+    // 把 rx 挂到 ry 下
+    fa[rx]=ry;
+    // 计算 val[rx] - val[ry]
+    weight[rx]=w-weight[x]+weight[y];
+    return false;
 }
 ```
