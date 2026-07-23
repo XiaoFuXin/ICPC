@@ -15,7 +15,7 @@
 
 ## 四.数据结构
 ### 1.带权并查集
-
+### 2.动态开点线段树
 
 ## 一.准备
 ### 1.火车头
@@ -369,5 +369,65 @@ bool unite(int x,int y,int w){
     // 计算 val[rx] - val[ry]
     weight[rx]=w-weight[x]+weight[y];
     return false;
+}
+```
+
+### 2.动态开点线段树
+```cpp
+const int N=4e5+5;
+const ll INF=1e18;
+struct {
+    int ls,rs;
+    ll sum;
+    ll lazy;
+}tr[N];
+int root,cnt;
+int new_node(){
+    cnt++;
+    tr[cnt].ls=tr[cnt].rs=0;
+    tr[cnt].sum=tr[cnt].lazy=0;
+    return cnt;
+}
+void pushup(int u){
+    tr[u].sum=tr[tr[u].ls].sum+tr[tr[u].rs].sum;
+}
+void pushdown(int u,int l,int r){
+    if(tr[u].lazy==0||!u)return;
+    int mid=(l+r)/2;
+    int ls=tr[u].ls,rs=tr[u].rs;
+    // 左儿子不存在就新建
+    if(!ls)ls=tr[u].ls=new_node();
+    tr[ls].sum+=tr[u].lazy*(mid-l+1);
+    tr[ls].lazy+=tr[u].lazy;
+    // 右儿子不存在就新建
+    if(!rs)rs=tr[u].rs=new_node();
+    tr[rs].sum+=tr[u].lazy*(r-mid);
+    tr[rs].lazy+=tr[u].lazy;
+
+    tr[u].lazy=0;
+}
+// 区间加 [L,R] += v
+void add(int &u,ll l, ll r,ll L,ll R,ll v){
+    if(!u)u=new_node();
+    if(L<=l&&r<=R){
+        tr[u].sum+=v*(r-l+1);
+        tr[u].lazy+=v;
+        return;
+    }
+    pushdown(u,l,r);
+    ll mid=(l+r)/2;
+    if(L<=mid)add(tr[u].ls,l,mid,L,R,v);
+    if(R>mid)add(tr[u].rs,mid+1,r,L,R,v);
+    pushup(u);
+}
+// 区间查询 [L,R] 和
+ll query(int u,ll l,ll r,ll L,ll R){
+    if(!u)return 0;
+    if(L<=l&&r<=R)return tr[u].sum;
+    pushdown(u,l,r);
+    ll mid=(l+r)/2,res=0;
+    if(l<=mid)res+=query(tr[u].ls,l,mid,L,R);
+    if(R>mid)res+=query(tr[u].rs,mid+1,r,L,R);
+    return res;
 }
 ```
