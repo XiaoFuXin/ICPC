@@ -16,6 +16,8 @@
 ## 四.数据结构
 ### 1.带权并查集
 ### 2.动态开点线段树
+### 3.线段树
+### 4.树链
 
 ## 一.准备
 ### 1.火车头
@@ -429,5 +431,178 @@ ll query(int u,ll l,ll r,ll L,ll R){
     if(l<=mid)res+=query(tr[u].ls,l,mid,L,R);
     if(R>mid)res+=query(tr[u].rs,mid+1,r,L,R);
     return res;
+}
+```
+
+### 3.线段树
+```cpp
+const int N=1e5+5;
+ll a[N];
+ll tree[4*N];
+ll lazy[4*N];
+
+void pushup(int p){
+    tree[p]=tree[2*p]+tree[2*p+1];
+}
+void build(int p,int l,int r){
+    if(l==r){
+        tree[p]=a[l];
+        return;
+    }
+    int mid=(l+r)/2;
+    build(2*p,l,mid);
+    build(2*p+1,mid+1,r);
+    pushup(p);
+}
+void pushdown(int p,int l,int r){
+    if(lazy[p]==0)return;
+    int mid=(l+r)/2;
+    int L=2*p,R=2*p+1;
+    tree[L]+=lazy[p]*(mid-l+1);
+    lazy[L]+=lazy[p];
+    tree[R]+=lazy[p]*(r-mid);
+    lazy[R]+=lazy[p];
+    lazy[p]=0;
+}
+void update(int p,int l,int r,int L,int R,ll v){
+    if(l>R||r<L)return;
+    if(l>=L&&r<=R){
+        tree[p]+=v*(r-l+1);
+        lazy[p]+=v;
+        return;
+    }
+    pushdown(p,l,r);
+    int mid=(l+r)/2;
+    update(2*p,l,mid,L,R,v);
+    update(2*p+1,mid+1,r,L,R,v);
+    pushup(p);
+}
+ll query(int p,int l,int r,int L,int R){
+    if(l>R||r<L)return 0;
+    if(l>=L&&r<=R)return tree[p];
+    pushdown(p,l,r);
+    int mid=(l+r)/2;
+    return query(2*p,l,mid,L,R)+query(2*p+1,mid+1,r,L,R);
+}
+```
+### 4.树链(接上线段树)
+``cpp
+const int N=1e5+5;
+ll a[N];
+ll tree[4*N];
+ll lazy[4*N];
+
+void pushup(int p){
+    tree[p]=tree[2*p]+tree[2*p+1];
+}
+void build(int p,int l,int r){
+    if(l==r){
+        tree[p]=a[rk[l]];
+        return;
+    }
+    int mid=(l+r)/2;
+    build(2*p,l,mid);
+    build(2*p+1,mid+1,r);
+    pushup(p);
+}
+void pushdown(int p,int l,int r){
+    if(lazy[p]==0)return;
+    int mid=(l+r)/2;
+    int L=2*p,R=2*p+1;
+    tree[L]+=lazy[p]*(mid-l+1);
+    lazy[L]+=lazy[p];
+    tree[R]+=lazy[p]*(r-mid);
+    lazy[R]+=lazy[p];
+    lazy[p]=0;
+}
+void update(int p,int l,int r,int L,int R,ll v){
+    if(l>R||r<L)return;
+    if(l>=L&&r<=R){
+        tree[p]+=v*(r-l+1);
+        lazy[p]+=v;
+        return;
+    }
+    pushdown(p,l,r);
+    int mid=(l+r)/2;
+    update(2*p,l,mid,L,R,v);
+    update(2*p+1,mid+1,r,L,R,v);
+    pushup(p);
+}
+ll query(int p,int l,int r,int L,int R){
+    if(l>R||r<L)return 0;
+    if(l>=L&&r<=R)return tree[p];
+    pushdown(p,l,r);
+    int mid=(l+r)/2;
+    return query(2*p,l,mid,L,R)+query(2*p+1,mid+1,r,L,R);
+}
+int n;
+vector<int>adj[N];
+// ---------- 节点信息 ----------
+//int a[N];// 节点初始权值
+int fa[N];// 父节点
+int dep[N]; // 深度
+int sz[N];// 子树大小
+int son[N];// 重儿子 (子树最大的儿子)
+int top[N];// 当前节点所在重链的顶端节点 (链头)
+int id[N];   // 节点 u 剖分后的新编号 (DFS序)
+int rk[N];// 新编号对应的原节点 (rk[id[u]] = u)
+
+int cnt=0;// DFS 序时间戳
+// ---------- 第一次 DFS: 处理 fa, dep, sz, son ----------
+void dfs1(int u,int f){
+    fa[u]=f;
+    dep[u]=dep[f]+1;
+    sz[u]=1;
+    son[u]=0;// 0 表示没有重儿子
+    for(int v:adj[u]){
+        if(v==f)continue;
+        dfs1(v,u);
+        sz[u]+=sz[v];
+        // 取子树最大的儿子作为重儿子
+        if(sz[v]>sz[son[u]])son[u]=v;
+    }
+}
+// ---------- 第二次 DFS: 剖分, 分配 id 和 top ----------
+void dfs2(int u,int tp){
+    top[u]=tp;
+    id[u]=++cnt;
+    rk[cnt]=u;
+    if(!son[u])return;// 叶子节点
+     // 【关键】必须优先遍历重儿子，保证同一条重链编号连续
+    dfs2(son[u],tp);
+     // 遍历轻儿子，每个轻儿子自己作为新链的起点
+    for(int v:adj[u]){
+        if(v==fa[u]||v==son[u])continue;
+        dfs2(v,v);
+    }
+}
+// ---------- 核心: 路径操作 ----------
+void update_path(int x,int y,int z){
+    //z %= MOD;
+    while(top[x]!=top[y]){
+        if(dep[top[x]]<dep[top[y]])swap(x,y);
+        update(1,1,n,id[top[x]],id[x],z);
+        x=fa[top[x]];
+    }
+    if(dep[x]>dep[y])swap(x,y);
+    update(1,1,n,id[x],id[y],z);
+}
+ll query_path(int x,int y){
+    ll res=0;
+    while(top[x]!=top[y]){
+        if(dep[top[x]]<dep[top[y]])swap(x,y);
+        res+=query(1,1,n,id[top[x]],id[x]);
+        x=fa[top[x]];
+    }
+    if(dep[x]>dep[y])swap(x,y);
+    res+=query(1,1,n,id[x],id[y]);
+    return res;
+}
+// ---------- 核心: 子树操作 (DFS序连续) ----------
+void update_tree(int x, int z){
+    update(1,1,n,id[x],id[x]+sz[x]-1,z);
+}
+ll query_tree(int x){
+    return query(1,1,n,id[x],id[x]+sz[x]-1);
 }
 ```
