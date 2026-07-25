@@ -19,6 +19,10 @@
 ### 3.线段树
 ### 4.树链
 
+## 五.数学
+### 1.矩阵快速幂
+### 2.线性基
+
 ## 一.准备
 ### 1.火车头
  ```cpp
@@ -486,7 +490,7 @@ ll query(int p,int l,int r,int L,int R){
 }
 ```
 ### 4.树链(接上线段树)
-``cpp
+```cpp
 const int N=1e5+5;
 ll a[N];
 ll tree[4*N];
@@ -604,5 +608,60 @@ void update_tree(int x, int z){
 }
 ll query_tree(int x){
     return query(1,1,n,id[x],id[x]+sz[x]-1);
+}
+```
+
+## 五.数学
+### 1.矩阵快速幂
+```cpp
+struct ju{
+    int m[N][N];
+};
+ju mul(ju &a,ju &b,int n){
+    ju res;
+    memset(res.m,0,sizeof(res.m));
+    for(int i=0;i<n;i++){
+        for(int k=0;k<n;k++){
+            if(a.m[i][k]==0)continue;
+            for(int j=0;j<n;j++){
+                res.m[i][j]=(res.m[i][j]+1LL*a.m[i][k]*b.m[k][j])%M;
+            }
+        }
+    }
+    return res;
+}
+ju ksm(ju a,ll b,int n){
+    ju res;
+    memset(res.m,0,sizeof(res.m));
+    for(int i=0;i<n;i++)res.m[i][i]=1;
+    while(b){
+        if(b&1)res=mul(res,a,n);
+        a=mul(a,a,n);
+        b>>=1;
+    }
+    return res;
+}
+```
+
+### 2.线性基
+```cpp
+ll b[65];
+void insert(ll x){
+    for(int i=63;i>=0;i--){
+        if((x>>i)&1){
+            if(!b[i]){
+                b[i]=x;
+                return;
+            }
+            x^=b[i];
+        }
+    }
+}
+ll getma(){
+    ll ans=0;
+    for(int i=63;i>=0;i--){
+        if((ans^b[i])>ans)ans^=b[i];
+    }
+    return ans;
 }
 ```
