@@ -18,6 +18,7 @@
 ### 2.动态开点线段树
 ### 3.线段树
 ### 4.树链
+### 5.st表
 
 ## 五.数学
 ### 1.矩阵快速幂
@@ -608,6 +609,32 @@ void update_tree(int x, int z){
 }
 ll query_tree(int x){
     return query(1,1,n,id[x],id[x]+sz[x]-1);
+}
+```
+
+### 5.st表
+```cpp
+const int N=1e5+5;
+const int K=20;
+
+int a[N];
+int st[N][K];
+int n;
+
+void build(){
+    for(int i=1;i<=n;i++){
+        st[i][0]=a[i];
+    }
+    for(int j=1;j<K;j++){
+        for(int i=1;i+(1<<j)-1<=n;i++){
+            st[i][j]=max(st[i][j-1],st[i+(1<<(j-1))][j-1]);
+        }
+    }
+}
+int query(int l,int r){
+    int len=r-l+1;
+    int k=31 - __builtin_clz(len);
+    return max(st[l][k],st[r-(1<<k)+1][k]);
 }
 ```
 
