@@ -12,6 +12,8 @@
 ## 三.字符串
 ### 1.KMP
 ### 2.马拉车
+### 3.trie树
+### 4.AC自动机
 
 ## 四.数据结构
 ### 1.带权并查集
@@ -353,7 +355,174 @@ string manacher(string s){
     return s.substr(start, max_len);
 }
 ```
+### 3.trie树
+```cpp
+int trie[N][26];
+int cnt[N];
+int tot=0;
 
+void insert(string s){
+    int u=0;
+    for(char c:s){
+        int v=c-'a';
+        if(!trie[u][v])trie[u][v]=++tot;
+        u=trie[u][v];
+        // 如果需要统计前缀出现次数，在这里 cnt[u]++ 
+    }
+    cnt[u]++;// 单词数+1（若统计重复单词）
+}
+// 查询某个单词出现次数
+int query(string s){
+    int u=0;
+    for(char c:s){
+        int v=c-'a';
+        if(!trie[u][v])return 0;
+        u=trie[u][v];
+    }
+    return cnt[u];
+}
+// 查询以 prefix 为前缀的单词个数（需要额外维护前缀计数）
+// 若只需判断是否存在前缀，用 bool 即可
+bool starts_with(string s){
+    int u=0;
+    for(char c:s){
+        int v=c-'a';
+        if(!trie[u][v])return false;
+        u=trie[u][v];
+    }
+    return true;
+}
+//高级扩展：前缀计数 + 单词计数
+int pass[MAXN];  // 经过该节点的次数（前缀统计）
+int endd[MAXN];  // 以该节点结尾的单词数
+
+void insert(const string &s) {
+    int u = 0;
+    for (char c : s) {
+        int v = c - 'a';
+        if (!trie[u][v]) trie[u][v] = ++tot;
+        u = trie[u][v];
+        pass[u]++;
+    }
+    endd[u]++;
+}
+```
+### 4.AC自动机
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+const int MOD = 10007;
+const int MAX_NODE = 6010;   // 模式串总长度 + 10
+const int ALPHA = 26;        // 大写字母 A-Z
+
+int tr[MAX_NODE][ALPHA];     // 转移表（补边后即为自动机图）
+int fail[MAX_NODE];          // 失配指针
+bool danger[MAX_NODE];       // 危险标记（包含模式串或失配链含危险）
+int tot = 0;                 // 节点总数（0号根节点）
+
+// ---------- 1. 初始化（多组数据必调！）----------
+void init() {
+    // 只需要清空用到的部分，但如果 MAX_NODE 不大（如6000），全清 memset 极快
+    memset(tr, 0, sizeof(tr));
+    memset(fail, 0, sizeof(fail));
+    memset(danger, 0, sizeof(danger));
+    tot = 0;
+}
+
+// ---------- 2. 插入模式串 ----------
+void insert(const string &s) {
+    int u = 0;
+    for (char c : s) {
+        int idx = c - 'A';   // 如果是小写字母，改为 c - 'a'
+        if (!tr[u][idx]) tr[u][idx] = ++tot;
+        u = tr[u][idx];
+    }
+    danger[u] = true;        // 标记单词结尾为危险
+}
+
+// ---------- 3. 构建 Fail 指针 + 补边（BFS） ----------
+void build_fail() {
+    queue<int> q;
+    // 初始化根节点的直接子节点
+    for (int i = 0; i < ALPHA; i++) {
+        if (tr[0][i]) {
+            fail[tr[0][i]] = 0;
+            q.push(tr[0][i]);
+        }
+    }
+
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+
+        for (int i = 0; i < ALPHA; i++) {
+            if (tr[u][i]) { 
+                // 有真实子节点 v
+                int v = tr[u][i];
+                // 核心1：设置 fail 指针
+                fail[v] = tr[fail[u]][i];
+                // 核心2：【危险继承】如果 fail[v] 是危险节点，v 也是危险的
+                // 这就是防止漏判 "ABCD" 中包含 "BC" 的关键！
+                danger[v] = danger[v] || danger[fail[v]];
+                q.push(v);
+            } else {
+                // 核心3：补边（路径压缩）
+                // 不存在的边直接指向 fail 的对应转移，省去 while 回退
+                tr[u][i] = tr[fail[u]][i];
+            }
+        }
+    }
+}
+
+// ---------- 4. DP 计算长度为 L 且不包含任何模式串的字符串个数 ----------
+int dp[105][MAX_NODE]; // dp[长度][节点编号]
+
+int solve(int L) {
+    memset(dp, 0, sizeof(dp));
+    dp[0][0] = 1; // 起点：长度为0，站在根节点
+
+    for (int i = 0; i < L; i++) {
+        for (int u = 0; u <= tot; u++) {
+            if (dp[i][u] == 0 || danger[u]) continue; // 危险节点不走
+            for (int c = 0; c < ALPHA; c++) {
+                int v = tr[u][c]; // 因为补过边了，这里直接跳转，O(1)
+                if (!danger[v]) { // 目标节点必须安全
+                    dp[i + 1][v] = (dp[i + 1][v] + dp[i][u]) % MOD;
+                }
+            }
+        }
+    }
+
+    int ans = 0;
+    for (int u = 0; u <= tot; u++) {
+        if (!danger[u]) ans = (ans + dp[L][u]) % MOD;
+    }
+    return ans;
+}
+
+// ---------- 5. 主函数示例（POJ 2778 / BZOJ 1030 风格）----------
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(0);
+
+    init(); // 非常重要！多组数据时务必调用
+
+    int n, L;
+    cin >> n >> L; // 输入模式串个数，和要求的字符串长度
+
+    for (int i = 0; i < n; i++) {
+        string s;
+        cin >> s;
+        insert(s);
+    }
+
+    build_fail(); // 建自动机
+
+    cout << solve(L) << endl; // 输出不包含模式串的方案数
+
+    return 0;
+}
+```
 ## 四.数据结构
 ### 1.带权并查集
 ```cpp
