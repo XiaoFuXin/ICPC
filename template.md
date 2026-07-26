@@ -4,6 +4,7 @@
 ## 一.准备
 ### 1.火车头
 ### 2.高精度
+### 3.交互
 
 ## 二.图论
 ### 1.最大流
@@ -215,9 +216,43 @@ pair<vi, vi> divmod(const vi &a, const vi &b) {
 
 ```
 
-### 2.最大流
+### 3.交互
 ```cpp
+#include <bits/stdc++.h>
+using namespace std;
 
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    int n;
+    cin >> n; // 读初始参数（根据题目调整）
+
+    int l = 1, r = n;
+    while (l < r) {
+        int mid = (l + r) / 2;
+
+        cout << "? " << mid << endl; // 输出询问，endl自带刷新
+
+        string s;
+        cin >> s; // 读回复
+
+        if (s == "<") r = mid - 1;
+        else if (s == ">") l = mid + 1;
+        else {
+            cout << "! " << mid << endl;
+            return 0;
+        }
+    }
+
+    cout << "! " << l << endl;
+    return 0;
+}
+```
+## 二.图论
+### 1.最大流
+
+```cpp
 #include<bits/stdc++.h>
 using namespace std;
 typedef long long ll;
