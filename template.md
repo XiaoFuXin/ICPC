@@ -26,6 +26,9 @@
 ### 1.矩阵快速幂
 ### 2.线性基
 
+## 六.计算几何
+### 1.凸包
+
 ## 一.准备
 ### 1.火车头
  ```cpp
@@ -859,5 +862,37 @@ ll getma(){
         if((ans^b[i])>ans)ans^=b[i];
     }
     return ans;
+}
+```
+
+## 六.计算几何
+### 1.凸包
+```cpp
+// ========== 1. 整型坐标 (long long) ==========
+struct PointLL { 
+    long long x, y; 
+    PointLL operator-(const PointLL& p) const { return {x - p.x, y - p.y}; }
+};
+
+// 向量叉积 (返回long long，坐标不超过1e9时安全，超1e9请自行替换内部为__int128)
+long long cross(const PointLL& a, const PointLL& b) { 
+    return a.x * b.y - a.y * b.x; 
+}
+long long cross(const PointLL& a, const PointLL& b, const PointLL& c) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+
+// ========== 2. 浮点坐标 (long double) ==========
+struct PointLD { 
+    long double x, y; 
+    PointLD operator-(const PointLD& p) const { return {x - p.x, y - p.y}; }
+};
+
+long double cross(const PointLD& a, const PointLD& b) { 
+    return a.x * b.y - a.y * b.x; 
+}
+long double cross(const PointLD& a, const PointLD& b, const PointLD& c) {
+    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 ```
