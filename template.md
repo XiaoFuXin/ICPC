@@ -21,6 +21,7 @@
 ### 3.线段树
 ### 4.树链
 ### 5.st表
+### 6.左偏树
 
 ## 五.数学
 ### 1.矩阵快速幂
@@ -844,6 +845,60 @@ int query(int l,int r){
     int len=r-l+1;
     int k=31 - __builtin_clz(len);
     return max(st[l][k],st[r-(1<<k)+1][k]);
+}
+```
+
+### 6.左偏树
+```cpp
+int val[N],lc[N],rc[N],dist[N],fa[N];
+bool del[N];
+int find(int u){
+    return u==fa[u]?u:fa[u]=find(fa[u]);
+}
+int merge(int x,int y){
+    if(!x||!y)return x+y;
+    if(val[x]>val[y]||(val[x]==val[y]&&x>y))swap(x,y);
+    rc[x]=merge(rc[x],y);
+    if(dist[lc[x]]<dist[rc[x]])swap(lc[x],rc[x]);
+    dist[x]=dist[rc[x]]+1;
+    return x;
+}
+void solve(){
+    int n,m;
+    cin>>n>>m;
+    dist[0]=-1;
+    for(int i=1;i<=n;i++){
+        cin>>val[i];
+        fa[i]=i;
+        lc[i]=rc[i]=0;
+        dist[i]=0;
+        del[i]=false;
+    }
+    while(m--){
+        int op,x,y;
+        cin>>op;
+        if(op==1){
+            cin>>x>>y;
+            if(del[x]||del[y])continue;
+            x=find(x),y=find(y);
+            if(x==y)continue;
+            int ne=merge(x,y);
+            fa[x]=fa[y]=ne;
+        }
+        else{
+            cin>>x;
+            if(del[x]){
+                cout<<-1<<endl;
+                continue;
+            }
+            x=find(x);
+            cout<<val[x]<<endl;
+            del[x]=true;
+            int ne=merge(lc[x],rc[x]);
+            fa[x] = fa[lc[x]] = fa[rc[x]] = ne;
+            lc[x]=rc[x]=0;
+        }
+    }
 }
 ```
 
