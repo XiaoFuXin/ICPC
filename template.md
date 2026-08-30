@@ -8,6 +8,7 @@
 
 ## 二.图论
 ### 1.最大流
+### 2.费用流
 
 ## 三.字符串
 ### 1.KMP
@@ -324,6 +325,72 @@ int main(){
     cout<<max_flow(s,t);
 }
 
+```
+### 2.费用流
+```cpp
+const int N=5e3+5;
+const ll INF=1e10;
+struct edge{
+    int to,rev;
+    ll v,c;
+};
+vector<edge>adj[N];
+ll dis[N];
+ll flow[N];
+int pv[N];
+int pe[N];
+bool inq[N];
+
+void add(int u,int v,ll f,ll c){
+    adj[u].push_back({v,(int)adj[v].size(),f,c});
+    adj[v].push_back({u,(int)adj[u].size()-1,0,-c});
+}
+bool spfa(int s,int t){
+    for(int i=0;i<N;i++){
+        dis[i]=INF;
+        flow[i]=INF;
+        inq[i]=false;
+    }
+    dis[s]=0;
+    queue<int>que;
+    que.push(s);
+    while(!que.empty()){
+        int x=que.front();que.pop();
+        inq[x]=false;
+        for(int i=0;i<adj[x].size();i++){
+            edge &e=adj[x][i];
+            if(e.v>0&&dis[e.to]>dis[x]+e.c){
+                dis[e.to]=dis[x]+e.c;
+                pv[e.to]=x;
+                pe[e.to]=i;
+                flow[e.to]=min(flow[x],e.v);
+                if(!inq[e.to]){
+                    inq[e.to]=true;
+                    que.push(e.to);
+                }
+            }
+        }
+    }
+    return dis[t]!=INF;
+}
+void minc(int s,int t){
+    ll ma=0;
+    ll ans=0;
+    while(spfa(s,t)){
+        ll f=flow[t];
+        ma+=f;
+        ans+=dis[t]*f;
+        int v=t;
+        while(v!=s){
+            int u=pv[v];
+            edge &e=adj[u][pe[v]];
+            e.v-=f;
+            adj[v][e.rev].v+=f;
+            v=u;
+        }
+    }
+    cout<<ma<<" "<<ans;
+}
 ```
 
 ## 三.字符串
