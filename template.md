@@ -23,6 +23,7 @@
 ### 4.树链
 ### 5.st表
 ### 6.左偏树
+### 7.替罪羊树
 
 ## 五.数学
 ### 1.矩阵快速幂
@@ -967,6 +968,194 @@ void solve(){
             lc[x]=rc[x]=0;
         }
     }
+}
+```
+
+### 7.替罪羊树
+```cpp
+const int N = 2e6 + 10;
+const double ALPHA = 0.7;
+
+int head;
+int ct;
+
+int key[N];
+int cnt[N];
+int lf[N];
+int rt[N];
+int sz[N];
+int df[N];
+int arr[N];
+int id;
+int top;
+int fa;
+int sd;
+
+int init(int num) {
+    key[++ct] = num;
+    lf[ct] = rt[ct] = 0;
+    cnt[ct] = sz[ct] = df[ct] = 1;
+    return ct;
+}
+
+void up(int i) {
+    sz[i] = sz[lf[i]] + sz[rt[i]] + cnt[i];
+    df[i] = df[lf[i]] + df[rt[i]] + (cnt[i] > 0);
+}
+
+void inorder(int i) {
+    if (i != 0) {
+        inorder(lf[i]);
+        if (cnt[i] > 0) {
+            arr[++id] = i;
+        }
+        inorder(rt[i]);
+    }
+}
+
+int build(int l, int r) {
+    if (l > r) return 0;
+    int m = l + r >> 1;
+    int h = arr[m];
+    lf[h] = build(l, m - 1);
+    rt[h] = build(m + 1, r);
+    up(h);
+    return h;
+}
+
+void rebuild() {
+    if (top != 0) {
+        id = 0;
+        inorder(top);
+        if (id > 0) {
+            if (fa == 0) {
+                head = build(1, id);
+            } else if (sd == 1) {
+                lf[fa] = build(1, id);
+            } else {
+                rt[fa] = build(1, id);
+            }
+        }
+    }
+}
+
+bool balance(int i) {
+    return ALPHA * sz[i] >= max(df[lf[i]], df[rt[i]]);
+}
+
+void add(int i, int f, int s, int num) {
+    if (i == 0) {
+        if (f == 0) {
+            head = init(num);
+        } else if (s == 1) {
+            lf[f] = init(num);
+        } else {
+            rt[f] = init(num);
+        }
+    } else {
+        if (key[i] == num) {
+            cnt[i]++;
+        } else if (key[i] > num) {
+            add(lf[i], i, 1, num);
+        } else {
+            add(rt[i], i, 2, num);
+        }
+
+        up(i);
+
+        if (!balance(i)) {
+            top = i;
+            fa = f;
+            sd = s;
+        }
+    }
+}
+
+void add(int num) {
+    top = fa = sd = 0;
+    add(head, 0, 0, num);
+    rebuild();
+}
+
+int small(int i, int num) {
+    if (i == 0) {
+        return 0;
+    }
+
+    if (key[i] >= num) {
+        return small(lf[i], num);
+    } else {
+        return sz[lf[i]] + cnt[i] + small(rt[i], num);
+    }
+}
+
+int getrank(int num) {
+    return small(head, num) + 1;
+}
+
+int index(int i, int x) {
+    if (sz[lf[i]] >= x) {
+        return index(lf[i], x);
+    } else if (sz[lf[i]] + cnt[i] >= x) {
+        return key[i];
+    } else {
+        return index(rt[i], x - sz[lf[i]] - cnt[i]);
+    }
+}
+
+int index(int x) {
+    return index(head, x);
+}
+
+int pre(int num) {
+    int pos = getrank(num);
+    if (pos == 1) {
+        return INT_MIN;
+    } else {
+        return index(pos - 1);
+    }
+}
+
+int post(int num) {
+    int pos = getrank(num + 1);
+    if (pos == sz[head] + 1) {
+        return INT_MAX;
+    } else {
+        return index(pos);
+    }
+}
+
+void remove(int i, int f, int s, int num) {
+    if (key[i] == num) {
+        cnt[i]--;
+    } else if (key[i] > num) {
+        remove(lf[i], i, 1, num);
+    } else {
+        remove(rt[i], i, 2, num);
+    }
+
+    up(i);
+    if (!balance(i)) {
+        top = i;
+        fa = f;
+        sd = s;
+    }
+}
+
+void remove(int num) {
+    if (getrank(num) != getrank(num + 1)) {
+        top = fa = sd = 0;
+        remove(head, 0, 0, num);
+        rebuild();
+    }
+}
+
+void clear() {
+    for (int i = 0; i < N; i++) {
+        key[i] = cnt[i] = lf[i] = rt[i] = sz[i] = df[i] = 0;
+    }
+
+    head = ct = 0;
 }
 ```
 
