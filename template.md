@@ -9,12 +9,14 @@
 ## 二.图论
 ### 1.最大流
 ### 2.费用流
+### 3.二分图
 
 ## 三.字符串
 ### 1.KMP
 ### 2.马拉车
 ### 3.trie树
 ### 4.AC自动机
+### 5.回文自动机
 
 ## 四.数据结构
 ### 1.带权并查集
@@ -394,6 +396,66 @@ void minc(int s,int t){
     cout<<ma<<" "<<ans;
 }
 ```
+### 3.二分图
+- 最大匹配
+ ```cpp
+
+#include <bits/stdc++.h>
+using namespace std;
+const int MAXN = 505;  // 根据题目调整顶点上限
+vector<int> adj[MAXN]; // 邻接表：左部节点 -> 右部节点
+int match[MAXN];       // match[v] = u 表示右部节点v匹配的左部节点u
+bool used[MAXN];       // 标记右部节点是否被访问（避免重复匹配）
+// 为左部节点u寻找增广路
+bool hungary(int u) {
+    // 遍历u能连接的所有右部节点
+    for (int v : adj[u]) {
+        if (used[v]) continue; // 已访问过，跳过
+        used[v] = true;        // 标记为已访问
+        // 情况1：右部节点v未匹配；情况2：v的匹配节点能找到其他匹配
+        if (match[v] == -1 || hungary(match[v])) {
+            match[v] = u;      // 更新匹配：v匹配u
+            return true;       // 找到增广路，返回成功
+        }
+    }
+    return false; // 未找到增广路
+}
+// 计算二分图最大匹配数（左部节点数为n）
+int max_matching(int n) {
+    int res = 0;
+    memset(match, -1, sizeof(match)); // 初始化所有右部节点为未匹配
+    for (int u = 1; u <= n; ++u) {    // 遍历所有左部节点
+        memset(used, false, sizeof(used)); // 每次找增广路重置访问标记
+        if (hungary(u)) res++;        // 找到增广路，匹配数+1
+    }
+    return res;
+}
+
+ ```
+- 染色法
+```cpp
+const int MAXN = 505;
+vector<int> adj[MAXN];
+int color[MAXN]; // 0:未染色，1/2:两种颜色
+// 染色DFS，返回是否为二分图
+bool dfs(int u, int c) {
+    color[u] = c;
+    for (int v : adj[u]) {
+        if (color[v] == c) return false; // 相邻节点同色，非二分图
+        if (color[v] == 0 && !dfs(v, 3 - c)) return false; // 未染色则染另一种颜色
+    }
+    return true;
+}
+// 判定整个图是否为二分图
+bool is_bipartite(int n) {
+    memset(color, 0, sizeof(color));
+    for (int i = 1; i <= n; ++i) {
+        if (color[i] == 0 && !dfs(i, 1)) return false;
+    }
+    return true;
+}
+
+```
 
 ## 三.字符串
 ### 1.KMP
@@ -631,6 +693,44 @@ int main() {
     cout << solve(L) << endl; // 输出不包含模式串的方案数
 
     return 0;
+}
+```
+
+### 5.回文自动机
+```cpp
+const int N=5e5+5;
+int ch[N][26];
+int fail[N];
+int cnt[N];
+int tot,last;
+int len[N];
+void init(){
+    tot=1;
+    last=0;
+    len[1]=-1;
+    len[0]=0;
+    fail[0]=1;
+    fail[1]=0;
+    memset(ch,0,sizeof(ch));
+}
+string s;
+int ans;
+int getfail(int x,int i){
+    while(s[i-len[x]-1]!=s[i])x=fail[x];
+    return x;
+}
+void insert(int i){
+    int c=s[i]-'a';
+    int p=getfail(last,i);
+    if(!ch[p][c]){
+        int np=++tot;
+        len[np]=len[p]+2;
+        fail[np]=ch[getfail(fail[p],i)][c];
+        cnt[np]=cnt[fail[np]]+1;
+        ch[p][c]=np;
+    }
+    last=ch[p][c];
+    ans=cnt[last];
 }
 ```
 ## 四.数据结构
