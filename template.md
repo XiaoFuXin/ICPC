@@ -33,6 +33,7 @@
 
 ## 六.计算几何
 ### 1.凸包
+### 2.前置知识,封装及函数
 
 ## 七.杂项
 ### 1.染色
@@ -1345,6 +1346,159 @@ long double cross(const PointLD& a, const PointLD& b, const PointLD& c) {
     return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 ```
+
+### 2.前置知识,封装及函数
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+
+const double eps=1e-9;
+const double PI=acos(-1.0);
+
+// 符号判断
+int sgn(double x){
+    if(fabs(x)<eps)return 0;
+    return x>0?1:-1;
+}
+
+//点
+struct point{
+    double x,y;
+    point(){}
+    point(double _x,double _y):x(_x),y(_y){}
+
+    // 运算符重载
+    point operator + (const point &b)const {return point(x+b.x,y+b.y);}
+    point operator - (const point &b)const {return point(x-b.x,y-b.y);}
+    point operator * (double k) const {return point(x*k,y*k);}
+    point operator / (double k) const {return point(x/k,y/k);}
+    
+    // 比较运算符（主要用于 sort 去重 和 map/set 排序）
+    bool operator == (const point &b)const {
+        return sgn(x-b.x)==0&&sgn(y-b.y)==0; 
+    }
+
+    bool operator < (const point &b)const {
+        return sgn(x-b.x)==0?sgn(y-b.y)<0:x<b.x;
+    }
+
+    double len() const { return hypot(x, y); }      // 模长（hypot防溢出）
+    double len2() const { return x*x + y*y; }      // 模长平方（比len快，防精度）
+    double angle() const { return atan2(y, x); }   // 极角
+};
+
+//点积
+double dot(point a,point b){
+    return a.x*b.x+a.y*b.y;
+}
+//叉积
+double  cross(point a,point b){
+    return a.x*b.y-a.y*b.x;
+}
+//长度
+double dist(point a,point b){
+    return (a-b).len();
+}
+
+//___________直线封装__________________
+struct line{
+    point s,e;// start(起点), end(终点) 或 直线上任意两点
+    line(){}
+    line(point _s,point _e):s(_s),e(_e){}
+
+    // 获取方向向量
+    point vec() const {return e-s;}
+    // 获取单位方向向量（常用于步进）
+    point unitvec() const {
+        return vec()/vec().len();
+    }
+};
+
+// 判断点P是否在线段AB上（含端点）
+bool pointOnSegment(point p,line l){
+    return sgn(cross(p-l.s,l.e-l.s))==0&& // 叉积为0：共线
+        sgn(dot(p-l.s,p-l.e))<=0; // 点积<=0：在端点之间
+}
+
+// 点P到直线L的投影点（垂足）vvvvvvvvv
+point projection(point p,line l){
+    point v=l.e-l.s;
+    // 如果l是点（长度为0），直接返回l.s，避免除以0
+    if(sgn(v.len())==0)return l.s;
+    double t=dot(p-l.s,v)/v.len2();// 投影系数t
+    return l.s+v*t;
+}
+
+// 点P到直线L的距离
+double distToLine(point p,line l){
+    point v=l.e-l.s;
+    if(sgn(v.len())==0)return dist(p,l.s);
+    return fabs(cross(v,p-l.s))/v.len();
+}
+
+// 点P到线段L的距离（比到直线距离复杂一点）
+double distToSegment(point p,line l){
+    point v=l.e-l.s;
+    if(sgn(v.len())==0)return dist(p, l.s);
+    double t = dot(p - l.s, v) / v.len2();
+    if (sgn(t) < 0) return dist(p, l.s);       // 投影在线段起点外
+    if (sgn(t - 1) > 0) return dist(p, l.e);   // 投影在线段终点外
+    return distToLine(p, l);                   // 投影在线段内部
+}
+
+// 求两直线交点（前提：必须保证不平行！）
+point lineIntersection(line l1, line l2) {
+    point v1 = l1.vec(), v2 = l2.vec();
+    // 如果平行，cross(v1,v2)==0，此时不能调用此函数！
+    double t = cross(l2.s - l1.s, v2) / cross(v1, v2);
+    return l1.s + v1 * t;
+}
+
+// 判断两线段是否相交（含端点、含共线重叠）
+bool segmentIntersect(line l1, line l2) {
+    double c1 = cross(l1.vec(), l2.s - l1.s);
+    double c2 = cross(l1.vec(), l2.e - l1.s);
+    double c3 = cross(l2.vec(), l1.s - l2.s);
+    double c4 = cross(l2.vec(), l1.e - l2.s);
+    return sgn(c1) * sgn(c2) <= 0 && sgn(c3) * sgn(c4) <= 0;
+}
+
+//求多边形面积(鞋带公式)(凹多边形也适用)
+double polygonArea(vector<point>& p){
+    double area=0;
+    int n=p.size();
+    for(int i=0;i<n;i++){
+        int j=(i+1)%n;
+        area+=cross(p[i],p[j]);
+    }
+    return fabs(area)/2.0;
+}
+
+// 判断点P是否在多边形poly内部（含边界）
+bool pointInPolygon(point p, vector<point>& poly){
+    int n=poly.size();
+    bool inside=false;
+    for(int i=0,j=n-1;i<n;j=i++){
+        if(pointOnSegment(p, line(poly[i], poly[j]))){
+            return true;// 在边界上，算内部（题目如果要求“严格内部”，这里返回false）
+        }
+
+        // 【第二步】核心射线判断（只统计穿越，完美避开顶点重复计数）
+        // 条件：(poly[i].y > p.y) != (poly[j].y > p.y)
+        // 含义：边的两个端点，一个在射线上方，一个在下方（等于的情况被忽略了）
+        if((sgn(poly[i].y-p.y)>0)!=(sgn(poly[j].y-p.y)>0)){
+            // 计算交点横坐标 x_inter
+            double x_inter=poly[i].x+(poly[j].x-poly[i].x)*(p.y-poly[i].y)/(poly[j].y-poly[i].y);
+            // 如果交点在 P 的右侧，统计一次穿越
+            if(sgn(x_inter-p.x)>0){
+                inside=!inside;
+            }
+        }
+    }
+    return inside;
+}
+```
+
 ## 七.杂项
 ### 1.染色
 # 1. 染色
