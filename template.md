@@ -10,6 +10,7 @@
 ### 1.最大流
 ### 2.费用流
 ### 3.二分图
+### 4.一般图最大匹配(带花树)
 
 ## 三.字符串
 ### 1.KMP
@@ -457,6 +458,151 @@ bool is_bipartite(int n) {
 }
 
 ```
+### 4.一般图最大匹配(带花树)
+# P6113 【模板】一般图最大匹配
+
+## 题目背景
+
+模板题，无背景。
+
+## 题目描述
+
+给出一张 $n$ 个点 $m$ 条边的无向图，求该图的最大匹配。
+
+## 输入格式
+
+第一行两个正整数 $n$ 和 $m$，分别表示图的点数和边数。
+
+接下来 $m$ 行，每行两个正整数 $u$ 和 $v$，表示图中存在一条连接 $u$ 和 $v$ 的无向边。
+
+## 输出格式
+
+第一行一个整数，表示最大匹配数。
+
+第二行 $n$ 个整数，第 $i$ 个数表示与结点 $i$ 匹配的结点编号，若该结点无匹配则输出 $0$。
+
+如有多解输出任意解即可。
+
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+const int N = 1005;
+
+int n, m;
+vector<int> g[N];
+
+int match[N];   // 匹配对象
+int pre[N];     // BFS 树上的父边
+int base[N];    // 缩花后的代表点
+int label[N];   // 0 未访问, 1 外点(S), 2 内点(T)
+int q[N], qh, qt;
+
+int vis[N], tim; // 求 LCA 用
+
+// 求两个外点在当前交替树中的最近公共祖先（花根）
+int lca(int u, int v) {
+    ++tim;
+    while (true) {
+        if (u) {
+            u = base[u];
+            if (vis[u] == tim) return u;
+            vis[u] = tim;
+            u = pre[match[u]];
+        }
+        swap(u, v);
+    }
+}
+
+// 将 u 到 p 的路径缩花
+void blossom(int u, int v, int p) {
+    while (base[u] != p) {
+        pre[u] = v;
+        v = match[u];
+        if (label[v] == 2) {
+            label[v] = 1;
+            q[++qt] = v;
+        }
+        base[u] = base[v] = p;
+        u = pre[v];
+    }
+}
+
+// 从 s 出发找增广路，找到返回 1，否则返回 0
+int find_path(int s) {
+    for (int i = 1; i <= n; ++i) {
+        label[i] = 0;
+        pre[i] = 0;
+        base[i] = i;
+    }
+    label[0] = pre[0] = 0;
+
+    qh = 1; qt = 0;
+    q[++qt] = s;
+    label[s] = 1; // 根是外点
+
+    while (qh <= qt) {
+        int u = q[qh++];
+        for (int v : g[u]) {
+            if (base[u] == base[v] || match[u] == v) continue;
+
+            if (label[v] == 0) {
+                pre[v] = u;
+                label[v] = 2; // 内点
+                if (!match[v]) {
+                    // 找到增广路，沿 pre 数组翻转匹配
+                    int cur = v;
+                    while (cur) {
+                        int nxt = pre[cur];
+                        int tmp = match[nxt];
+                        match[cur] = nxt;
+                        match[nxt] = cur;
+                        cur = tmp;
+                    }
+                    return 1;
+                } else {
+                    label[match[v]] = 1;
+                    q[++qt] = match[v];
+                }
+            } else if (label[v] == 1) {
+                // 遇到另一个外点，形成奇环，缩花
+                int p = lca(u, v);
+                blossom(u, v, p);
+                blossom(v, u, p);
+            }
+        }
+    }
+    return 0;
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    cin >> n >> m;
+    for (int i = 0; i < m; ++i) {
+        int u, v;
+        cin >> u >> v;
+        if (u == v) continue;
+        g[u].push_back(v);
+        g[v].push_back(u);
+    }
+
+    int ans = 0;
+    for (int i = 1; i <= n; ++i) {
+        if (!match[i]) {
+            ans += find_path(i);
+        }
+    }
+
+    cout << ans << '\n';
+    for (int i = 1; i <= n; ++i) {
+        cout << match[i] << (i == n ? '\n' : ' ');
+    }
+    return 0;
+}
+```
+
 
 ## 三.字符串
 ### 1.KMP
