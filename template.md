@@ -1694,32 +1694,32 @@ ll getma(){
 ## 六.计算几何
 ### 1.凸包
 ```cpp
-// ========== 1. 整型坐标 (long long) ==========
-struct PointLL { 
-    long long x, y; 
-    PointLL operator-(const PointLL& p) const { return {x - p.x, y - p.y}; }
-};
-
-// 向量叉积 (返回long long，坐标不超过1e9时安全，超1e9请自行替换内部为__int128)
-long long cross(const PointLL& a, const PointLL& b) { 
-    return a.x * b.y - a.y * b.x; 
-}
-long long cross(const PointLL& a, const PointLL& b, const PointLL& c) {
-    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-}
-
-
-// ========== 2. 浮点坐标 (long double) ==========
-struct PointLD { 
-    long double x, y; 
-    PointLD operator-(const PointLD& p) const { return {x - p.x, y - p.y}; }
-};
-
-long double cross(const PointLD& a, const PointLD& b) { 
-    return a.x * b.y - a.y * b.x; 
-}
-long double cross(const PointLD& a, const PointLD& b, const PointLD& c) {
-    return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+vector<point> get_tu(vector<point>a){
+    sort(a.begin(),a.end(),[&](point u,point v){
+        if(u.x==v.x)return u.y<v.y;
+        return u.x<v.x;
+    });
+    vector<point>res;
+    int top=-1;
+    for(int i=0;i<a.size();i++){
+        while(top>=1&&cross(res[top]-res[top-1],a[i]-res[top-1])<eps){
+            top--;
+            res.pop_back();
+        }
+        top++;
+        res.push_back(a[i]);
+    }
+    int g=top;
+    for(int i=a.size()-1;i>=0;i--){
+        while(top>g&&cross(res[top]-res[top-1],a[i]-res[top-1])<eps){
+            top--;
+            res.pop_back();
+        }
+        top++;
+        res.push_back(a[i]);
+    }
+    res.pop_back();
+    return res;
 }
 ```
 
