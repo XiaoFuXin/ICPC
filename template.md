@@ -38,6 +38,7 @@
 ## 六.计算几何
 ### 1.凸包
 ### 2.前置知识,封装及函数
+### 3.半平面交
 
 ## 七.杂项
 ### 1.染色
@@ -1874,7 +1875,108 @@ bool pointInPolygon(point p, vector<point>& poly){
     return inside;
 }
 ```
+### 3.半平面交
+# P4196 【模板】半平面交 / [CQOI2006] 凸多边形
 
+## 题目描述
+
+逆时针给出 $n$ 个凸多边形的顶点坐标，求它们交的面积。例如 $n=2$ 时，两个凸多边形如下图：
+
+![](https://cdn.luogu.com.cn/upload/image_hosting/7ieux7g3.png)
+
+则相交部分的面积为 $5.233$。
+
+## 输入格式
+
+第一行有一个整数 $n$，表示凸多边形的个数，以下依次描述各个多边形。第 $i$ 个多边形的第一行包含一个整数 $m_i$，表示多边形的边数，以下 $m_i$ 行每行两个整数，逆时针给出各个顶点的坐标。
+
+## 输出格式
+
+输出文件仅包含一个实数，表示相交部分的面积，保留三位小数。
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+const double eps=1e-9;
+const int N=5005;
+
+struct point{
+    double x,y;
+    point(){}
+    point(double x,double y):x(x),y(y){}
+    point operator +(const point &b)const {return point(x+b.x,y+b.y);}
+    point operator -(const point &b)const {return point(x-b.x,y-b.y);}
+    point operator *(double k)const {return point(k*x,k*y);}
+};
+struct line{
+    point s,e;
+    double ang;
+    line(){}
+    line(point s,point e):s(s),e(e){ang=atan2(e.y-s.y,e.x-s.x);}
+    point vec()const {return e-s;}
+};
+double cross(point a,point b){
+    return a.x*b.y-a.y*b.x;
+}
+double polygonArea(vector<point>&p){
+    double area=0;
+    int n=p.size();
+    for(int i=0;i<n;i++){
+        int j=(i+1)%n;
+        area+=cross(p[i],p[j]);
+    }
+    return fabs(area)/2.0;
+}
+point jiao(line l1,line l2){
+    point v1=l1.vec(),v2=l2.vec();
+    double t=cross(l2.s-l1.s,v2)/cross(v1,v2);
+    return l1.s+v1*t;
+}
+bool onright(line &a,line &b,line &c){
+    point p=jiao(a,b);
+    return cross(c.e-c.s,p-c.s)<-eps;
+}
+line l1[N];
+double banjiao(vector<line>&ls){
+    sort(ls.begin(),ls.end(),[&](line &x,line &y){
+        if(fabs(x.ang-y.ang)<=eps)return cross(x.e-x.s,y.s-x.s)<0;
+        return x.ang<y.ang;
+    });
+    int h=1,t=0;
+    for(int i=0;i<ls.size();i++){
+        if(i>0&&fabs(ls[i].ang-ls[i-1].ang)<eps)continue;
+        while(h<t&&onright(l1[t-1],l1[t],ls[i]))t--;
+        while(h<t&&onright(l1[h],l1[h+1],ls[i]))h++;
+        l1[++t]=ls[i];
+    }
+    while(h<t&&onright(l1[t-1],l1[t],l1[h]))t--;
+    while(h<t&&onright(l1[h],l1[h+1],l1[t]))h++;
+    if(t-h+1<3){
+       // cout<<"0.000"<<endl;
+        return 0;
+    }
+    vector<point>tu;
+    l1[++t]=l1[h];
+    for(int i=h;i<t;i++){
+        tu.push_back(jiao(l1[i],l1[i+1]));
+    }
+    double res=polygonArea(tu);
+    return res;
+}
+int main(){
+    int n;
+    cin>>n;
+    vector<line>ls;
+    for(int i=0;i<n;i++){
+        int m;
+        cin>>m;
+        vector<point>a(m);
+        for(int i=0;i<m;i++)cin>>a[i].x>>a[i].y;
+        for(int i=0;i<m;i++)ls.push_back(line(a[i],a[(i+1)%m]));
+    }
+    double res=banjiao(ls);
+    printf("%.3lf",res);
+}
+```
 ## 七.杂项
 ### 1.染色
 # 1. 染色
