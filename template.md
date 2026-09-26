@@ -12,6 +12,8 @@
 ### 3.二分图
 ### 4.一般图最大匹配(带花树)
 ### 5.一般图最大权匹配
+### 6. 2-SAT
+### 7.虚树
 
 ## 三.字符串
 ### 1.KMP
@@ -603,7 +605,234 @@ int main() {
     return 0;
 }
 ```
+### 6. 2-SAT
+# P4782 【模板】2-SAT
 
+## 题目描述
+
+有 $n$ 个布尔变量 $x_1\sim x_n$，另有 $m$ 个需要满足的条件，每个条件的形式都是 「$x_i$ 为 `true` / `false` 或 $x_j$ 为 `true` / `false`」。比如 「$x_1$ 为真或 $x_3$ 为假」、「$x_7$ 为假或 $x_2$ 为假」。
+
+2-SAT 问题的目标是给每个变量赋值使得所有条件得到满足。
+
+## 输入格式
+
+第一行两个整数 $n$ 和 $m$，意义如题面所述。
+
+接下来 $m$ 行每行 $4$ 个整数 $i$, $a$, $j$, $b$，表示 「$x_i$ 为 $a$ 或 $x_j$ 为 $b$」($a, b\in \{0,1\}$)
+
+## 输出格式
+
+如无解，输出 `IMPOSSIBLE`；
+
+否则输出 `POSSIBLE`，下一行 $n$ 个整数 $x_1\sim x_n$（$x_i\in\{0,1\}$），表示构造出的解。
+
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+const int N=2e6+5;
+vector<int>adj[N];
+stack<int>stk;
+bool instk[N];
+int low[N],dfn[N],ssc[N];
+int tot,cur;
+int n,m;
+void add(int u,int v){
+    adj[u].push_back(v);
+}
+int node(int u,int v){
+    return u+(v?0:n);
+}
+void dfs(int u){
+    low[u]=dfn[u]=++tot;
+    stk.push(u);
+    instk[u]=true;
+    for(int v:adj[u]){
+        if(!dfn[v]){
+            dfs(v);
+            low[u]=min(low[u],low[v]);
+        }
+        else if(instk[v]){
+            low[u]=min(low[u],dfn[v]);
+        }
+    }
+    if(low[u]==dfn[u]){
+        int v;
+        cur++;
+        do{
+            v=stk.top();stk.pop();
+            instk[v]=false;
+            ssc[v]=cur;
+        }while(v!=u);
+    }
+}
+int main(){
+    cin>>n>>m;
+    while(m--){
+        int i,a,j,b;
+        cin>>i>>a>>j>>b;
+        add(node(i,a^1),node(j,b));
+        add(node(j,b^1),node(i,a));
+    }
+    for(int i=1;i<=2*n;i++)if(!dfn[i])dfs(i);
+    for(int i=1;i<=n;i++){
+        if(ssc[i]==ssc[i+n]){
+            cout<<"IMPOSSIBLE"<<endl;
+            return 0;
+        }
+    }
+    cout<<"POSSIBLE"<<endl;
+    for(int i=1;i<=n;i++){
+        cout<<(ssc[i]<ssc[i+n]?1:0)<<" ";
+    }
+}
+```
+### 7.虚树
+# P2495 【模板】虚树 / [SDOI2011] 消耗战
+
+## 题目描述
+
+在一场战争中，战场由 $n$ 个岛屿和 $n-1$ 个桥梁组成，保证每两个岛屿间有且仅有一条路径可达。现在，我军已经侦查到敌军的总部在编号为 $1$ 的岛屿，而且他们已经没有足够多的能源维系战斗，我军胜利在望。已知在其他 $k$ 个岛屿上有丰富能源，为了防止敌军获取能源，我军的任务是炸毁一些桥梁，使得敌军不能到达任何能源丰富的岛屿。由于不同桥梁的材质和结构不同，所以炸毁不同的桥梁有不同的代价，我军希望在满足目标的同时使得总代价最小。  
+
+侦查部门还发现，敌军有一台神秘机器。即使我军切断所有能源之后，他们也可以用那台机器。机器产生的效果不仅仅会修复所有我军炸毁的桥梁，而且会重新随机资源分布（但可以保证的是，资源不会分布到 $1$ 号岛屿上）。不过侦查部门还发现了这台机器只能够使用 $m$ 次，所以我们只需要把每次任务完成即可。
+
+## 输入格式
+
+第一行一个整数 $n$，表示岛屿数量。  
+
+接下来 $n-1$ 行，每行三个整数 $u,v,w$ ，表示 $u$ 号岛屿和 $v$ 号岛屿由一条代价为 $w$ 的桥梁直接相连。  
+
+第 $n+1$ 行，一个整数 $m$ ，代表敌方机器能使用的次数。  
+
+接下来 $m$ 行，第 $i$ 行一个整数 $k_i$ ，代表第 $i$ 次后，有 $k_i$ 个岛屿资源丰富。接下来 $k_i$ 个整数 $h_1,h_2,..., h_{k_i}$ ，表示资源丰富岛屿的编号。
+
+## 输出格式
+
+输出共 $m$ 行，表示每次任务的最小代价。
+
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+typedef pair<ll,ll> pll;
+const int N=3e5+5;
+const int K=20;
+int dep[N],dfn[N];
+int fa[N][K];
+ll mi[N];
+vector<pll>adj[N];
+vector<int>vt[N];
+int tot=0;
+void dfs(int u,int f){
+    fa[u][0]=f;
+    dep[u]=dep[f]+1;
+    dfn[u]=++tot;
+    for(int i=1;i<K;i++){
+        fa[u][i]=fa[fa[u][i-1]][i-1];
+    }
+    for(auto[v,w]:adj[u]){
+        if(v==f)continue;
+        mi[v]=min(mi[u],w);
+        dfs(v,u);
+    }
+}
+int lca(int u,int v){
+    if(dep[u]<dep[v])swap(u,v);
+    int c=dep[u]-dep[v];
+    for(int i=0;i<K;i++){
+        if(c&(1<<i))u=fa[u][i];
+    }
+    if(u==v)return u;
+    for(int i=K-1;i>=0;i--){
+        if(fa[u][i]!=fa[v][i]){
+            u=fa[u][i];
+            v=fa[v][i];
+        }
+    }
+    return fa[u][0];
+}
+
+int stk[N];
+int top;
+bool iskey[N];
+vector<int>key;
+vector<int>vs;
+void build(){
+    sort(key.begin(),key.end(),[&](int x,int y){
+        return dfn[x]<dfn[y];
+    });
+    vs.clear();
+    top=0;
+    stk[++top]=1;
+    vs.push_back(1);
+    for(int i:key){
+        int l=lca(i,stk[top]);
+        if(l!=stk[top]){
+            while(top>1&&dfn[stk[top-1]]>=dfn[l]){
+                vt[stk[top-1]].push_back(stk[top]);
+                top--;
+            }
+            if(stk[top]!=l){
+                vt[l].push_back(stk[top]);
+                stk[top]=l;
+                vs.push_back(l);
+            }
+        }
+        stk[++top]=i;
+        vs.push_back(i);
+    }
+    while(top>1){
+        vt[stk[top-1]].push_back(stk[top]);
+        top--;
+    }
+}
+ll dp[N];
+void dfs2(int u){
+    if(iskey[u])dp[u]=mi[u];
+    else{
+        ll sum=0;
+        for(int v:vt[u]){
+            dfs2(v);
+            sum+=dp[v];
+        }
+        dp[u]=min(mi[u],sum);
+    }
+}
+void solve(){
+    int k;
+    cin>>k;
+    key.clear();
+    for(int i=1;i<=k;i++){
+        int u;
+        cin>>u;
+        key.push_back(u);
+        iskey[u]=true;
+    }
+    build();
+    dfs2(1);
+    cout<<dp[1]<<endl;
+    for(int u:vs){
+        vt[u].clear();
+        iskey[u]=false;
+    }
+}
+
+int main(){
+    int n;
+    cin>>n;
+    for(int i=1;i<n;i++){
+        ll u,v,w;
+        cin>>u>>v>>w;
+        adj[u].push_back({v,w});
+        adj[v].push_back({u,w});
+    }
+    mi[1]=1e18;
+    dfs(1,0);
+    int t;
+    cin>>t;
+    while(t--)solve();
+}
+```
 
 ## 三.字符串
 ### 1.KMP
