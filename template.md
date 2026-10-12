@@ -21,6 +21,8 @@
 ### 3.trie树
 ### 4.AC自动机
 ### 5.回文自动机
+### 6.后缀排序
+### 7.后缀自动机
 
 ## 四.数据结构
 ### 1.带权并查集
@@ -1112,6 +1114,157 @@ void insert(int i){
     ans=cnt[last];
 }
 ```
+### 6.后缀排序
+# P3809 【模板】后缀排序
+## 题目描述
+读入一个长度为 $ n $ 的由大小写英文字母或数字组成的字符串，请把这个字符串的所有非空后缀按字典序（用 ASCII 数值比较）从小到大排序，然后按顺序输出后缀的第一个字符在原串中的位置。位置编号为 $ 1 $ 到 $ n $。
+## 输入格式
+一行一个长度为 $ n $ 的仅包含大小写英文字母或数字的字符串。
+## 输出格式
+一行，共 $n$ 个整数，表示答案。
+```cpp
+struct node{
+    int fi,se,id;
+}ns[N];
+int n;
+string s;
+int rk[N];
+int sa[N];
+int getfail(int x,int l){
+    if(x+l>n)return 0;
+    return rk[x+l];
+}
+void solve(){
+    cin>>s;
+    n=s.size();
+    s=" "+s;
+    
+    for(int i=1;i<=n;i++){
+        ns[i].fi=s[i];
+        ns[i].se=0;
+        ns[i].id=i;
+    }
+    sort(ns+1,ns+1+n,[&](node &a,node &b){
+        if(a.fi!=b.fi)return a.fi<b.fi;
+        return a.se<b.se;
+    });
+    int cur=0;
+     for(int i=1;i<=n;i++){
+            if(i==1||ns[i].fi!=ns[i-1].fi||ns[i].se!=ns[i-1].se)cur++;
+            rk[ns[i].id]=cur;
+            sa[i]=ns[i].id;
+        }
+    for(int len=1;len<=n;len<<=1){
+        for(int i=1;i<=n;i++){
+            ns[i].fi=rk[i];
+            ns[i].se=getfail(i,len);
+            ns[i].id=i;
+        }
+        sort(ns+1,ns+1+n,[&](node &a,node &b){
+        if(a.fi!=b.fi)return a.fi<b.fi;
+        return a.se<b.se;
+        });
+        int cur=0;
+        for(int i=1;i<=n;i++){
+            if(i==1||ns[i].fi!=ns[i-1].fi||ns[i].se!=ns[i-1].se)cur++;
+            rk[ns[i].id]=cur;
+            sa[i]=ns[i].id;
+        }
+        if(cur==n)break;
+    }
+    for(int i=1;i<=n;i++)cout<<sa[i]<<" ";
+}
+```
+### 7.后缀自动机
+# P3804 【模板】后缀自动机（SAM）
+
+## 题目描述
+
+给定一个只包含小写字母的字符串 $S$。
+
+请你求出 $S$ 的所有出现次数不为 $1$ 的子串的出现次数乘上该子串长度的最大值。
+
+如果没有这样的子串，输出 $0$。
+
+## 输入格式
+
+一行一个仅包含小写字母的字符串 $S$。
+
+## 输出格式
+
+一个整数，为所求答案。
+
+```cpp
+const int N=2e6+5;
+int ch[N][26];
+int links[N],len[N],cnt[N];
+int sz,last;
+
+void extend(int c){
+    int cur=++sz;
+    len[cur]=len[last]+1;
+    cnt[cur]=1;
+    int p=last;
+    while(p&&!ch[p][c]){
+        ch[p][c]=cur;
+        p=links[p];
+    }
+    if(!p){
+        links[cur]=1;
+    }
+    else{
+        int q=ch[p][c];
+        if(len[p]+1==len[q]){
+            links[cur]=q;
+        }
+        else{
+            int clone=++sz;
+            len[clone]=len[p]+1;
+            links[clone]=links[q];
+            memcpy(ch[clone],ch[q],sizeof(ch[q]));
+            cnt[clone]=0;
+
+            while(p&&ch[p][c]==q){
+                ch[p][c]=clone;
+                p=links[p];
+            }
+            links[q]=links[cur]=clone;
+        }
+    }
+    last=cur;
+}
+
+ll solve(){
+    vector<int>order(sz+1);
+    vector<int>bucket(sz+1,0);
+    for(int i=1;i<=sz;i++)bucket[len[i]]++;
+    for(int i=1;i<=sz;i++)bucket[i]+=bucket[i-1];
+    for(int i=sz;i>=1;i--)order[bucket[len[i]]--]=i;
+
+    for(int i=sz;i>=1;i--){
+        int u=order[i];
+        if(links[u])cnt[links[u]]+=cnt[u];
+    }
+    ll ans=0;
+    for(int i=2;i<=sz;i++){
+        if(cnt[i]>1){
+            ans=max(ans,1LL*cnt[i]*len[i]);
+        }
+    }
+    return ans;
+}
+
+int main(){
+    sz=last=1;
+    string s;
+    cin>>s;
+    for(char c:s)extend(c-'a');
+    cout<<solve()<<endl;
+}
+```
+
+
+
 ## 四.数据结构
 ### 1.带权并查集
 ```cpp
