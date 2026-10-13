@@ -42,6 +42,7 @@
 ### 1.凸包
 ### 2.前置知识,封装及函数
 ### 3.半平面交
+### 4.角度
 
 ## 七.杂项
 ### 1.染色
@@ -2251,6 +2252,79 @@ int main(){
     }
     double res=banjiao(ls);
     printf("%.3lf",res);
+}
+```
+
+### 4.角度
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+const double PI = acos(-1.0);
+const double EPS = 1e-9;
+
+struct Point {
+    double x, y;
+};
+
+Point operator-(Point a, Point b) {
+    return {a.x - b.x, a.y - b.y};
+}
+
+double dot(Point a, Point b) {
+    return a.x * b.x + a.y * b.y;
+}
+
+double cross(Point a, Point b) {
+    return a.x * b.y - a.y * b.x;
+}
+
+double length(Point a) {
+    return sqrt(dot(a, a));
+}
+
+double clampd(double x, double l, double r) {
+    return max(l, min(r, x));
+}
+
+// 两个向量的无向夹角，返回 [0, pi]
+double angleBetween(Point a, Point b) {
+    double la = length(a);
+    double lb = length(b);
+    if (la < EPS || lb < EPS) return 0; // 零向量，按题意处理
+
+    double c = dot(a, b) / (la * lb);
+    c = clampd(c, -1.0, 1.0); // 防止浮点误差导致 acos 越界
+    return acos(c);
+}
+
+// 从向量 a 逆时针转到向量 b 的有向夹角，返回 (-pi, pi]
+double orientedAngle(Point a, Point b) {
+    return atan2(cross(a, b), dot(a, b));
+}
+
+// 从向量 a 逆时针转到向量 b 的角度，返回 [0, 2*pi)
+double ccwAngle(Point a, Point b) {
+    double t = orientedAngle(a, b);
+    if (t < 0) t += 2 * PI;
+    return t;
+}
+
+// 角 ABC，即 BA 与 BC 的夹角，返回 [0, pi]
+double angleABC(Point A, Point B, Point C) {
+    return angleBetween(A - B, C - B);
+}
+
+// 极角 / 方位角：从 x 轴正方向逆时针到 v，返回 [0, 2*pi)
+double polarAngle(Point v) {
+    double t = atan2(v.y, v.x);
+    if (t < 0) t += 2 * PI;
+    return t;
+}
+
+// 弧度转角度
+double toDegree(double rad) {
+    return rad * 180.0 / PI;
 }
 ```
 ## 七.杂项
