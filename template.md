@@ -16,6 +16,7 @@
 ### 7.虚树
 ### 8.上下界网络流
 ### 9.点分治
+### 10.Kruskal 重构树
 
 ## 三.字符串
 ### 1.KMP
@@ -34,10 +35,16 @@
 ### 5.st表
 ### 6.左偏树
 ### 7.替罪羊树
+### 8.树上启发式合并
+### 9.主席树
+### 10.主席树2（静态区间第 k 小）
+### 11.可持久化并查集
+### 12.可持久化tire树
 
 ## 五.数学
 ### 1.矩阵快速幂
 ### 2.线性基
+### 3.Pollard-Rho(高效的质数判断方法)
 
 ## 六.计算几何
 ### 1.凸包
@@ -992,6 +999,265 @@ int main(){
 //    clear(G)        清空结构
 //    这些按题目实现，其他骨架基本不用动。
 ```
+
+### 10.Kruskal 重构树
+# P4768 [NOI2018] 归程
+
+## 题目描述
+
+本题的故事发生在魔力之都，在这里我们将为你介绍一些必要的设定。
+
+魔力之都可以抽象成一个 $n$ 个节点、$m$ 条边的无向连通图（节点的编号从 $1$ 至 $n$）。我们依次用 $l,a$ 描述一条边的**长度、海拔**。
+
+作为季风气候的代表城市，魔力之都时常有雨水相伴，因此道路积水总是不可避免的。由于整个城市的排水系统连通，因此**有积水的边一定是海拔相对最低的一些边**。我们用**水位线**来描述降雨的程度，它的意义是：所有海拔**不超过**水位线的边都是**有积水**的。
+
+Yazid 是一名来自魔力之都的 OIer，刚参加完 ION2018 的他将踏上归程，回到他温暖的家。Yazid 的家恰好在魔力之都的 $1$ 号节点。对于接下来 $Q$ 天，每一天 Yazid 都会告诉你他的出发点 $v$，以及当天的水位线 $p$。
+
+每一天，Yazid 在出发点都拥有一辆车。这辆车由于一些故障不能经过有积水的边。Yazid 可以在任意节点下车，这样接下来他就可以步行经过有积水的边。但车会被留在他下车的节点并不会再被使用。
+需要特殊说明的是，第二天车会被重置，这意味着：
+
+- 车会在新的出发点被准备好。
+- Yazid 不能利用之前在某处停放的车。
+
+Yazid 非常讨厌在雨天步行，因此他希望在完成回家这一目标的同时，最小化他**步行经过的边**的总长度。请你帮助 Yazid 进行计算。
+
+本题的部分测试点将强制在线，具体细节请见【输入格式】和【子任务】。
+
+## 输入格式
+
+单个测试点中包含多组数据。输入的第一行为一个非负整数 $T$，表示数据的组数。
+
+接下来依次描述每组数据，对于每组数据：
+
+第一行 $2$ 个非负整数 $n,m$，分别表示节点数、边数。
+
+接下来 $m$ 行，每行 $4$ 个正整数 $u, v, l, a$，描述一条连接节点 $u, v$ 的、长度为 $l$、海拔为 $a$ 的边。
+在这里，我们保证 $1 \leq u,v \leq n$。
+
+接下来一行 $3$ 个非负数 $Q, K, S$，其中 $Q$ 表示总天数，$K \in {0,1}$ 是一个会在下面被用到的系数，$S$ 表示的是可能的最高水位线。
+
+接下来 $Q$ 行依次描述每天的状况。每行 $2$ 个整数 $v_0, p_0$ 描述一天：
+
+- 这一天的出发节点为 $v = (v_0 + K \times \mathrm{lastans} - 1) \bmod n + 1$。
+- 这一天的水位线为 $p = (p_0 + K \times \mathrm{lastans}) \bmod (S + 1)$。
+
+其中 $\mathrm{lastans}$ 表示上一天的答案（最小步行总路程）。特别地，我们规定第 $1$ 天时 $\mathrm{lastans} = 0$。
+在这里，我们保证 $1 \leq v_0 \leq n$，$0 \leq p_0 \leq S$。
+
+对于输入中的每一行，如果该行包含多个数，则用单个空格将它们隔开。
+
+## 输出格式
+
+依次输出各组数据的答案。对于每组数据：
+
+- 输出 $Q$ 行每行一个整数，依次表示每天的最小步行总路程。
+
+### 数据范围与约定
+
+所有测试点均保证 $T\leq 3$，所有测试点中的所有数据均满足如下限制：
+
+- $n\leq 2\times 10^5$，$m\leq 4\times 10^5$，$Q\leq 4\times 10^5$，$K\in\left\{0,1\right\}$，$1\leq S\leq 10^9$。
+- 对于所有边：$l\leq 10^4$，$a\leq 10^9$。
+- 任意两点之间都直接或间接通过边相连。
+
+**为了方便你快速理解，我们在表格中使用了一些简单易懂的表述。在此，我们对这些内容作形式化的说明：**
+
+- 图形态：对于表格中该项为“一棵树”或“一条链”的测试点，保证 $m = n-1$。除此之外，这两类测试点分别满足如下限制：
+  - 一棵树：保证输入的图是一棵树，即保证边不会构成回路。
+  - 一条链：保证所有边满足 $u + 1 = v$。
+- 海拔：对于表格中该项为“一种”的测试点，保证对于所有边有 $a = 1$。
+- 强制在线：对于表格中该项为“是”的测试点，保证 $K = 1$；如果该项为“否”，则有 $K = 0$。
+- 对于所有测试点，如果上述对应项为“不保证”，则对该项内容不作任何保证。
+::cute-table{tuack}
+
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+
+struct node {
+    int u, v, w;
+    bool operator<(const node& a) const {
+        return w > a.w;
+    }
+};
+
+const int N = 2e5 + 10;
+const int M = 4e5 + 10;
+const ll inf = 1e18;
+int n, m, Q, idx, k, s;
+int pe[N * 2];
+int val[N * 2];
+int dep[N * 2];
+int fa[N * 2][31];
+node edg[M];
+vector<ll> adj[N * 2];
+vector<PLL> tree[N];
+
+
+void clear() {
+    for (int i = 0; i <= 2 * n; i++) {
+        pe[i] = val[i] = dep[i] = 0;
+        for (int j = 0; j < 31; j++) {
+            fa[i][j] = 0;
+        }
+
+        adj[i].clear();
+    }
+
+    for (int i = 1; i <= n; i++) {
+        tree[i].clear();
+    }
+}
+int find(int x) {
+    if (pe[x] != x) {
+        pe[x] = find(pe[x]);
+    }
+
+    return pe[x];
+}
+
+void dfs(int u, int f) {
+    fa[u][0] = f;
+    dep[u] = dep[f] + 1;
+    for (int i = 1; i <= 30; i++) {
+        fa[u][i] = fa[fa[u][i - 1]][i - 1];
+    }
+    for (auto &i : adj[u]) {
+        if (i == f) continue;
+        dfs(i, u);
+    }
+}
+
+
+int lca(int x, int y) {
+    if (dep[x] > dep[y]) {
+        swap(x, y);
+    }
+
+    int tem = dep[y] - dep[x];
+    for (int i = 0; tem; i++, tem >>= 1) {
+        if (tem & 1) {
+            y = fa[y][i];
+        }
+    }
+
+    if (x == y) return x;
+    for (int i = 30; i >= 0; i--) {
+        if (fa[x][i] != fa[y][i]) {
+            x = fa[x][i];
+            y = fa[y][i];
+        }
+    }
+
+    return fa[x][0];
+}
+
+ll Ans(int p, int x) {
+    for (int i = 30; i >= 0; i--) {
+        if (fa[p][i] && val[fa[p][i]] > x) {
+            p = fa[p][i];
+        }
+    }
+
+    return p;
+}
+
+void solve() {
+    cin >> n >> m;
+    for (int i = 1; i <= m; i++) {
+        int u, v, l, a;
+        cin >> u >> v >> l >> a;
+
+        edg[i] = {u, v, a};
+        tree[u].push_back({v, l});
+        tree[v].push_back({u, l});
+    }
+
+    vector<ll> dis(2 * n + 1, inf);
+    vector<ll> vis(n + 1);
+    priority_queue<PLL, vector<PLL>, greater<>> q;
+    q.push({0, 1});
+    dis[1] = 0;
+
+    while (q.size()) {
+        auto t = q.top().second;
+        q.pop();
+
+        if (vis[t]) continue;
+        vis[t] = 1;
+
+        for (auto &[i, d] : tree[t]) {
+            if (dis[i] > dis[t] + d) {
+                dis[i] = dis[t] + d;
+                q.push({dis[i], i});
+            }
+        }
+    }
+
+    sort(edg + 1, edg + m + 1);
+
+    for (int i = 1; i <= 2 * n; i++) pe[i] = i;
+    idx = n;
+    for (int i = 1; i <= m; i++) {
+        auto [u, v, w] = edg[i];
+        u = find(u);
+        v = find(v);
+
+        if (u != v) {
+            ++idx;
+            pe[u] = idx;
+            pe[v] = idx;
+            val[idx] = w;
+            adj[idx].push_back(v);
+            adj[idx].push_back(u);
+            dis[idx] = min(dis[u], dis[v]);
+        }
+    }
+
+    dfs(idx, 0);
+    // for (int i = 1; i <= n; i++) cout << dis[i] << "\n";
+    cin >> Q >> k >> s;
+
+    ll ans = 0;
+    while (Q--) {
+        ll u, p;
+        cin >> u >> p;
+
+        u = (u + k * ans - 1) % n + 1;
+        p = (p + k * ans) % (s + 1);
+
+        ans = dis[Ans(u, p)];
+
+        cout << ans << "\n";
+    }
+
+    clear();
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
+
 ## 三.字符串
 ### 1.KMP
 ```cpp
@@ -1944,6 +2210,787 @@ void clear() {
     head = ct = 0;
 }
 ```
+### 8.树上启发式合并
+# P9233 [蓝桥杯 2023 省 A] 颜色平衡树
+
+## 题目描述
+
+给定一棵树，结点由 $1$ 至 $n$ 编号，其中结点 $1$ 是树根。树的每个点有一个颜色 $C_i$。
+
+如果一棵树中存在的每种颜色的结点个数都相同，则我们称它是一棵颜色平衡树。
+
+求出这棵树中有多少个子树是颜色平衡树。
+
+## 输入格式
+
+输入的第一行包含一个整数 $n$，表示树的结点数。
+
+接下来 $n$ 行，每行包含两个整数 $C_i,F_i$，用一个空格分隔，表示第 $i$ 个结点的颜色和父亲结点编号。
+
+特别地，输入数据保证 $F_1$ 为 $0$，也即 $1$ 号点没有父亲结点。保证输入数据是一棵树。
+
+## 输出格式
+
+输出一行包含一个整数表示答案。
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+const int N = 2e5 + 10;
+
+int n, diff, ans;
+vector<vector<ll>> adj(N);
+vector<ll> c(N);
+vector<ll> sz(N);
+vector<ll> son(N);
+vector<ll> fa(N);
+vector<ll> col(N);
+vector<ll> cnt(N);
+
+void dfs(int u, int f) {
+    sz[u] = 1;
+    fa[u] = f;
+    for (auto &i : adj[u]) {
+        if (i == f) continue;
+        dfs(i, u);
+        sz[u] += sz[i];
+    }
+
+    int p = 0;
+    for (auto &i : adj[u]) {
+        if (i == f) continue;
+        if (sz[i] > sz[p]) {
+            p = i;
+        }
+    }
+
+    son[u] = p;
+}
+
+void dfs1(int u) {
+    if (col[c[u]]) {
+        cnt[col[c[u]]]--;
+        if (cnt[col[c[u]]] == 0) diff--;
+    }
+
+    col[c[u]]++;
+    if (col[c[u]]) {
+        cnt[col[c[u]]]++;
+        if (cnt[col[c[u]]] == 1) diff++;
+    }
+
+    for (auto &i : adj[u]) {
+        if (i == fa[u]) continue;
+        dfs1(i);
+    }
+}
+
+void dfs2(int u) {
+    if (col[c[u]]) {
+        cnt[col[c[u]]]--;
+        if (cnt[col[c[u]]] == 0) diff--;
+    }
+
+    col[c[u]]--;
+    if (col[c[u]]) {
+        cnt[col[c[u]]]++;
+        if (cnt[col[c[u]]] == 1) diff++;
+    }
+
+    for (auto &i : adj[u]) {
+        if (i == fa[u]) continue;
+        dfs2(i);
+    }
+}
+
+void dsu(int u, int k) {
+    for (auto &i : adj[u]) {
+        if (i == fa[u] || i == son[u]) continue;
+        dsu(i, 0);
+    }
+
+    if (son[u] != 0) dsu(son[u], 1);
+
+    if (col[c[u]]) {
+        cnt[col[c[u]]]--;
+        if (cnt[col[c[u]]] == 0) diff--;
+    }
+
+    col[c[u]]++;
+    if (col[c[u]]) {
+        cnt[col[c[u]]]++;
+        if (cnt[col[c[u]]] == 1) diff++;
+    }
+    
+
+    for (auto &i : adj[u]) {
+        if (i == fa[u] || i == son[u]) continue;
+        dfs1(i);
+    }
+
+    if (diff == 1) ans++;
+    if (k == 0) {
+        dfs2(u);
+    }
+}
+
+void solve() {
+    cin >> n;
+
+    for (int i = 1; i <= n; i++) {
+        int x;
+        cin >> c[i] >> x;
+
+        adj[i].push_back(x);
+        adj[x].push_back(i);
+    }
+
+    dfs(1, 0);
+    dsu(1, 0);
+
+    cout << ans << "\n";
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    // cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
+### 9.主席树
+# P3919 【模板】可持久化线段树 1（可持久化数组）
+
+
+## 题目描述
+
+如题，你需要维护这样的一个长度为 $ N $ 的数组 $a$，支持如下两种操作：
+
+
+1. 在某个历史版本上修改某一个位置上的值。
+
+2. 访问某个历史版本上的某一位置的值。
+
+
+此外，每进行一次操作，就会生成一个新的版本。版本编号即为当前操作的编号（从 $1$ 开始编号，版本 $0$ 表示初始状态数组）。
+
+**对于操作 $2$，即为生成一个完全一样的版本，不作任何改动**。即，询问生成的版本是询问所访问的那个版本的复制。
+
+## 输入格式
+
+输入的第一行包含两个正整数 $ N, M $，分别表示数组的长度和操作的个数。
+
+第二行包含 $ N $ 个整数，其中第 $i$ 个数为 $a_i$。
+
+接下来 $ M $ 行每行包含 $3$ 或 $4$ 个整数，代表两种操作之一（设当前是第 $i$ 次操作）：
+
+1. 对于操作 $1$，格式为 `v 1 p c`，即为在版本 $ v $ 的基础上，将 $ a_{p} $ 修改为 $c$。
+
+2. 对于操作 $2$，格式为 `v 2 p`，即访问版本 $ v $ 中的 $ a_{p} $ 的值，注意：**此时应生成与版本 $v$ 完全相同的新版本**。
+
+## 输出格式
+
+输出包含若干行，依次为每个操作 $2$ 的结果。
+
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+const int N = 1e6 + 5;
+const int MAXN = 24 * N;
+
+int n, m, idx;
+int a[N];
+int root[N];
+int lf[MAXN];
+int rt[MAXN];
+int val[MAXN];
+
+inline int build(int l, int r) {
+    int root = ++idx;
+    if (l == r) {
+        val[idx] = a[l];
+        return root;
+    }
+
+    int mid = l + r >> 1;
+    lf[root] = build(l, mid);
+    rt[root] = build(mid + 1, r);
+
+    return root;
+}
+
+inline int update(int pre, int l, int r, int p, int x) {
+    int root = ++idx;
+    lf[root] = lf[pre];
+    rt[root] = rt[pre];
+
+    if (l == r) {
+        val[root] = x;
+        return root;
+    }
+
+    int mid = l + r >> 1;
+    if (p <= mid) lf[root] = update(lf[pre], l, mid, p, x);
+    else rt[root] = update(rt[pre], mid + 1, r, p, x);
+
+    return root;
+}
+
+inline int query(int pre, int l, int r, int p) {
+    if (l == r) {
+        return val[pre];
+    }
+
+    int mid = l + r >> 1;
+    if (p <= mid) return query(lf[pre], l, mid, p);
+    return query(rt[pre], mid + 1, r, p);
+}
+
+void solve() {
+    cin >> n >> m;
+    for (int i = 1; i <= n; i++) {
+        cin >> a[i];
+    }
+
+    root[0] = build(1, n);
+    for (int i = 1; i <= m; i++) {
+        int v, o;
+        cin >> v >> o;
+
+        if (o == 1) {
+            int p, c;
+            cin >> p >> c;
+            root[i] = update(root[v], 1, n, p, c);
+        } else {
+            int p;
+            cin >> p;
+
+            root[i] = root[v];
+            cout << query(root[v], 1, n, p) << "\n";
+        }
+    }
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    // cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
+### 10.主席树2（静态区间第 k 小）
+# P3834 【模板】可持久化线段树 2（静态区间第 k 小）
+
+## 题目背景
+
+这是个非常经典的可持久化权值线段树入门题——静态区间第 $k$ 小。
+
+## 题目描述
+
+如题，给定 $n$ 个整数构成的序列 $a$，将对于指定的闭区间 $[l, r]$ 查询其区间内的第 $k$ 小值。
+
+## 输入格式
+
+第一行包含两个整数，分别表示序列的长度 $n$ 和查询的个数 $m$。  
+第二行包含 $n$ 个整数，第 $i$ 个整数表示序列的第 $i$ 个元素 $a_i$。   
+接下来 $m$ 行每行包含三个整数 $ l, r, k$ , 表示查询区间 $[l, r]$ 内的第 $k$ 小值。
+
+## 输出格式
+
+对于每次询问，输出一行一个整数表示答案。
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+const int N = 2e5 + 5;
+const int MAXN = 24 * N;
+
+int n, m, idx;
+int a[N];
+int tmp[N];
+int arr[N];
+int cnt[N];
+
+int root[N];
+int lf[MAXN];
+int rt[MAXN];
+int sz[MAXN];
+
+int build(int l, int r) {
+    int p = ++idx;
+    if (l == r) {
+        return p;
+    }
+
+    int mid = l + r >> 1;
+    lf[p] = build(l, mid);
+    rt[p] = build(mid + 1, r);
+
+    return p;
+}
+
+int update(int pre, int l, int r, int p, int x) {
+    int root = ++idx;
+    lf[root] = lf[pre];
+    rt[root] = rt[pre];
+    if (l == r) {
+        sz[root] = x;
+        return root;
+    }
+
+    int mid = l + r >> 1;
+    if (p <= mid) {
+        lf[root] = update(lf[root], l, mid, p, x);
+    } else {
+        rt[root] = update(rt[root], mid + 1, r, p, x);
+    }
+
+    sz[root] = sz[lf[root]] + sz[rt[root]];
+    return root;
+}
+
+int query(int l, int r, int p1, int p2, int k) {
+    if (l == r) {
+        return tmp[l];
+    }
+
+    int Lsz = sz[lf[p2]] - sz[lf[p1]];
+
+    int mid = l + r >> 1;
+    if (Lsz >= k) {
+        return query(l, mid, lf[p1], lf[p2], k);
+    }
+
+    return query(mid + 1, r, rt[p1], rt[p2], k - Lsz);
+}
+void solve() {
+    cin >> n >> m;
+    for (int i = 1; i <= n; i++) {
+        cin >> a[i];
+        tmp[i] = a[i];
+    }
+
+    sort(tmp + 1, tmp + n + 1);
+    int len = unique(tmp + 1, tmp + n + 1) - (tmp + 1);
+    for (int i = 1; i <= n; i++) {
+        arr[i] = lower_bound(tmp + 1, tmp + len + 1, a[i]) - tmp;
+    }
+
+    root[0] = build(1, len);
+    for (int i = 1; i <= n; i++) {
+        cnt[arr[i]]++;
+        root[i] = update(root[i - 1], 1, len, arr[i], cnt[arr[i]]);
+    }
+
+    while (m--) {
+        int l, r, k;
+        cin >> l >> r >> k;
+
+        cout << query(1, len, root[l - 1], root[r], k) << "\n";
+    }
+
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    // cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
+### 11.可持久化并查集
+# P3402 【模板】可持久化并查集
+
+## 题目描述
+
+给定 $n$ 个集合，第 $i$ 个集合内初始状态下只有一个数，为 $i$。
+
+有 $m$ 次操作。操作分为 $3$ 种：
+
+ - `1 a b` 合并 $a,b$ 所在集合；
+
+ - `2 k` 回到第 $k$ 次操作（执行三种操作中的任意一种都记为一次操作）之后的状态，保证已经进行过至少 $k$ 次操作（不算本次操作），特别的，若 $k=0$，则表示回到初始状态；
+
+ - `3 a b` 询问 $a,b$ 是否属于同一集合，如果是则输出 $1$，否则输出 $0$。
+
+## 输入格式
+
+第一行两个整数，$n,m$。
+
+接下来 $m$ 行，每行先输入一个数 $opt$。若 $opt=2$ 则再输入一个整数 $k$，否则再输入两个整数 $a,b$，描述一次操作。
+
+## 输出格式
+
+对每个操作 $3$，输出一行一个整数表示答案。
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+const int N = 1e5 + 5;
+const int M = 2e5 + 5;
+const int MAXN = 80 * N;
+
+int n, m, idx;
+
+int rootpe[M];
+int rootsz[M];
+
+int lf[MAXN];
+int rt[MAXN];
+int val[MAXN];
+
+int buildpe(int l, int r) {
+    int p = ++idx;
+    if (l == r) {
+        val[p] = l;
+        return p;
+    }
+
+    int mid = l + r >> 1;
+    lf[p] = buildpe(l, mid);
+    rt[p] = buildpe(mid + 1, r);
+
+    return p;
+}
+
+int buildsz(int l, int r) {
+    int p = ++idx;
+    if (l == r) {
+        val[p] = 1;
+        return p;
+    }
+
+    int mid = l + r >> 1;
+    lf[p] = buildsz(l, mid);
+    rt[p] = buildsz(mid + 1, r);
+
+    return p;
+}
+
+int update(int k, int x, int l, int r, int i) {
+    int p = ++idx;
+    lf[p] = lf[i];
+    rt[p] = rt[i];
+    val[p] = val[i];
+    if (l == r) {
+        val[p] = x;
+        return p;
+    }
+
+    int mid = l + r >> 1;
+    if (k <= mid) lf[p] = update(k, x, l, mid, lf[i]);
+    else rt[p] = update(k, x, mid + 1, r, rt[i]);
+
+    return p;
+}
+
+int query(int k, int l, int r, int i) {
+    if (l == r) {
+        return val[i];
+    }
+
+    int mid = l + r >> 1;
+    if (k <= mid) {
+        return query(k, l, mid, lf[i]);
+    } else {
+        return query(k, mid + 1, r, rt[i]);
+    }
+}
+
+int find(int u, int v) {
+    int fa = query(u, 1, n, rootpe[v]);
+    while (u != fa) {
+        u = fa;
+        fa = query(u, 1, n, rootpe[v]);
+    }
+    return u;
+}
+
+void  merge (int a, int b, int v) {
+    a = find(a, v);
+    b = find(b, v);
+
+    if (a != b) {
+        int sza = query(a, 1, n, rootsz[v]);
+        int szb = query(b, 1, n, rootsz[v]);
+
+        if (sza >= szb) {
+            rootpe[v] = update(b, a, 1, n, rootpe[v]);
+            rootsz[v] = update(a, sza + szb, 1, n, rootsz[v]);
+        } else {
+            rootpe[v] = update(a, b, 1, n, rootpe[v]);
+            rootsz[v] = update(b, sza + szb, 1, n, rootsz[v]);
+        }
+    }
+}
+
+void solve() {
+    cin >> n >> m;
+    rootpe[0] = buildpe(1, n);
+    rootsz[0] = buildsz(1, n);
+    for (int i = 1; i <= m; i++) {
+        int op;
+        cin >> op;
+
+        if (op == 1) {
+            int a, b;
+            cin >> a >> b;
+
+            rootpe[i] = rootpe[i - 1];
+            rootsz[i] = rootsz[i - 1];
+            merge(a, b, i);
+        } else if (op == 2) {
+            int k;
+            cin >> k;
+
+            rootpe[i] = rootpe[k];
+            rootsz[i] = rootsz[k];
+        } else {
+            int a, b;
+            cin >> a >> b;
+
+            rootpe[i] = rootpe[i - 1];
+            rootsz[i] = rootsz[i - 1];
+            if (find(a, i) == find(b, i)) {
+                cout << "1\n";
+            } else {
+                cout << "0\n";
+            }
+        }
+    }
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    // cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
+### 12.可持久化tire树
+# P6088 [JSOI2015] 字符串树
+
+## 题目背景
+
+萌萌买了一颗字符串树的种子，春天种下去以后夏天就能长出一棵很大的字符串树。字符串树很奇特，树枝上都密密麻麻写满了字符串，看上去很复杂的样子。
+
+## 题目描述
+
+字符串树本质上还是一棵树，即 $N$ 个节点 $N-1$ 条边的连通无向无环图，节点从 $1$ 到 $N$ 编号。与普通的树不同的是，树上的每条边都对应了一个字符串。萌萌和 JYY 在树下玩的时候，萌萌决定考一考 JYY。每次萌萌都写出一个字符串 $S$ 和两个节点 $U,V$，JYY 需要立即回答 $U$ 和 $V$ 之间的最短路径（即 $U,V$ 之间边数最少的路径，由于给定的是一棵树，这样的路径是唯一的）上有多少个字符串以 $S$ 为前缀。
+
+JYY 虽然精通编程，但对字符串处理却不在行。所以他请你帮他解决萌萌的难题。
+
+## 输入格式
+
+输入第一行包含一个整数 $N$，代表字符串树的节点数量。
+
+接下来 $N-1$ 行，每行先是两个数 $U,V$，然后是一个字符串 $S$，表示节点 $U$ 和节点 $V$ 之间有一条直接相连的边，这条边上的字符串是 $S$。输入数据保证给出的是一棵合法的树。
+
+接下来一行包含一个整数 $Q$，表示萌萌的问题数。
+
+接下来 $Q$ 行，每行先是两个数 $U,V$，然后是一个字符串 $S$，表示萌萌的一个问题是节点 $U$ 和节点 $V$ 之间的最短路径上有多少字符串以 $S$ 为前缀。
+
+## 输出格式
+
+输出 $Q$ 行，每行对应萌萌的一个问题的答案。
+
+## 说明/提示
+
+对于 $100\%$ 的数据，$1\leq N,Q\leq 10^5$，输入所有字符串长度不超过 $10$ 且只包含 `a~z` 的小写字母。
+```cpp
+#include <bits/stdc++.h>
+
+using namespace std;
+
+using ll = long long;
+using lll = __int128;
+using ull = unsigned long long;
+
+using PII = pair<int, int>;
+using PLL = pair<long long ,long long>;
+
+const int N = 1e5 + 5;
+const int MAXN = 30 * N;
+
+int n, m, idx;
+
+int root[N];
+int cnt[MAXN];
+int dep[N];
+int fa[N][31];
+int trie[MAXN][26];
+vector<pair<int, string>> adj[N];
+
+int update(string s, int i) {
+    int p = ++idx;
+    cnt[idx] = cnt[i] + 1;
+    for (int j = 0; j < 26; j++) {
+        trie[p][j] = trie[i][j];
+    }
+
+    for (int j = 0, pre = p; j < s.size(); j++) {
+        trie[pre][s[j] - 'a'] = ++idx;
+        i = trie[i][s[j] - 'a'];
+        for (int k = 0; k < 26; k++) {
+            trie[idx][k] = trie[i][k];
+        }
+        cnt[idx] = cnt[i] + 1;
+        pre = idx;
+    }
+
+    return p;
+}
+
+void dfs(int u, int f) {
+    fa[u][0] = f;
+    dep[u] = dep[f] + 1;
+    for (int i = 1; i <= 30; i++) {
+        fa[u][i] = fa[fa[u][i - 1]][i - 1];
+    }
+
+    for (auto &[i, s] : adj[u]) {
+        if (i == f) continue;
+        root[i] = update(s, root[u]);
+        dfs(i, u);
+    }
+}
+
+int lca(int x, int y) {
+    if (dep[x] > dep[y]) swap(x, y);
+    int tmp = dep[y] - dep[x];
+    for (int i = 0; tmp; i++, tmp>>= 1) {
+        if (tmp & 1) {
+            y = fa[y][i];
+        }
+    }
+
+    if (x == y) return x;
+    for (int i = 30; i >= 0; i--) {
+        if (fa[x][i] != fa[y][i]) {
+            x = fa[x][i];
+            y = fa[y][i];
+        }
+    }
+
+    return fa[x][0];
+}
+
+int query(int u, int v, string s) {
+    int w = lca(u, v);
+    u = root[u], v = root[v], w = root[w];
+
+    int ans = 1e9;
+    for (int i = 0; i < s.size(); i++) {
+        u = trie[u][s[i] - 'a'];
+        v = trie[v][s[i] - 'a'];
+        w = trie[w][s[i] - 'a'];
+    }
+
+    ans = cnt[u] + cnt[v] - 2 * cnt[w];
+    return ans;
+}
+
+void solve() {
+    cin >> n;
+    for (int i = 1; i < n; i++) {
+        int u, v;
+        string s;
+        cin >> u >> v >> s;
+        adj[u].push_back({v, s});
+        adj[v].push_back({u, s});
+    }
+
+    root[1] = ++idx;
+    dfs(1, 0);
+
+    cin >> m;
+    while (m--) {
+        int u, v;
+        string s;
+        cin >> u >> v >> s;
+
+        int ans = query(u, v, s);
+
+        cout << ans << "\n";
+    }
+
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    
+    int t = 1;
+    // cin >> t;
+
+    while (t--) {
+        solve();
+    }
+
+    return 0;
+}
+```
 
 ## 五.数学
 ### 1.矩阵快速幂
@@ -1997,6 +3044,174 @@ ll getma(){
         if((ans^b[i])>ans)ans^=b[i];
     }
     return ans;
+}
+```
+### 3.Pollard-Rho(高效的质数判断方法)
+# P4718 【模板】Pollard-Rho
+
+## 题目描述
+
+Miller Rabin 算法是一种高效的质数判断方法。虽然是一种不确定的质数判断法，但是在选择多种底数的情况下，正确率是可以接受的。
+
+Pollard rho 是一个非常玄学的方式，用于在 $O(n^{\frac{1}{4}})$ 的期望时间复杂度内计算合数 $n$ 的某个非平凡因子。事实上算法导论给出的是 $O(\sqrt p)$，$p$ 是 $n$ 的某个最小因子，满足 $p$ 与 $\frac{n}{p}$ 互质。但是这些都是期望，未必符合实际。但事实上 Pollard rho 算法在实际环境中运行的相当不错。
+
+这里我们要写一个程序，对于每个数字检验是否是质数，是质数就输出 `Prime`；如果不是质数，输出它最大的质因子是哪个。
+
+## 输入格式
+
+第一行，$T$ 代表数据组数（不大于 $350$）
+
+以下 $T$ 行，每行一个整数 $n$，保证 $2 \le n \le {10}^{18}$。
+
+## 输出格式
+
+输出 $T$ 行。
+
+对于每组测试数据输出结果。
+```cpp
+#include <bits/stdc++.h>
+using namespace std;
+
+typedef unsigned long long ull;
+typedef __int128 lll;
+
+// 快速乘（利用 __int128）
+ull mul_mod(ull a, ull b, ull mod) {
+    return (lll)a * b % mod;
+}
+
+// 快速幂
+ull pow_mod(ull a, ull b, ull mod) {
+    ull res = 1;
+    while (b) {
+        if (b & 1) res = mul_mod(res, a, mod);
+        a = mul_mod(a, a, mod);
+        b >>= 1;
+    }
+    return res;
+}
+
+// Miller-Rabin 素性测试（确定性基，适用于 64 位整数）
+bool is_prime(ull n) {
+    if (n < 2) return false;
+    if (n == 2 || n == 3) return true;
+    if (n % 2 == 0) return false;
+    ull d = n - 1;
+    int s = 0;
+    while ((d & 1) == 0) {
+        d >>= 1;
+        s++;
+    }
+    for (ull a : {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37}) {
+        if (a >= n) continue;
+        ull x = pow_mod(a, d, n);
+        if (x == 1 || x == n - 1) continue;
+        bool composite = true;
+        for (int r = 1; r < s; ++r) {
+            x = mul_mod(x, x, n);
+            if (x == n - 1) {
+                composite = false;
+                break;
+            }
+        }
+        if (composite) return false;
+    }
+    return true;
+}
+
+// 二进制 GCD，比欧几里得更快
+ull gcd(ull a, ull b) {
+    if (a == 0) return b;
+    if (b == 0) return a;
+    int shift = __builtin_ctzll(a | b);
+    a >>= __builtin_ctzll(a);
+    do {
+        b >>= __builtin_ctzll(b);
+        if (a > b) swap(a, b);
+        b -= a;
+    } while (b);
+    return a << shift;
+}
+
+// 无符号绝对差
+ull diff(ull a, ull b) {
+    return a > b ? a - b : b - a;
+}
+
+// Pollard-Rho (Brent 变体 + 批量 GCD)
+ull pollard(ull n) {
+    if (n % 2 == 0) return 2;
+    if (n % 3 == 0) return 3;
+    static mt19937_64 rng(chrono::steady_clock::now().time_since_epoch().count());
+    while (true) {
+        ull c = uniform_int_distribution<ull>(1, n - 1)(rng);
+        ull x = uniform_int_distribution<ull>(2, n - 2)(rng);
+        ull y = x;
+        ull q = 1;
+        ull g = 1;
+        ull r = 1;
+        auto f = [&](ull x) { return (mul_mod(x, x, n) + c) % n; };
+        while (g == 1) {
+            x = y;
+            for (ull i = 0; i < r; ++i) y = f(y);
+            ull k = 0;
+            while (k < r && g == 1) {
+                for (ull i = 0; i < min(128ULL, r - k); ++i) {
+                    y = f(y);
+                    q = mul_mod(q, diff(x, y), n);
+                }
+                g = gcd(q, n);
+                k += 128;
+            }
+            r <<= 1;
+        }
+        if (g == n) {
+            g = 1;
+            do {
+                x = f(x);
+                g = gcd(diff(x, y), n);
+            } while (g == 1);
+        }
+        if (g != n) return g;
+    }
+}
+
+ull max_factor;
+
+// 递归分解，更新最大质因子
+void factor(ull n) {
+    if (n <= max_factor) return;
+    if (is_prime(n)) {
+        max_factor = max(max_factor, n);
+        return;
+    }
+    ull d = pollard(n);
+    factor(d);
+    factor(n / d);
+}
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+    int T;
+    cin >> T;
+    while (T--) {
+        ull n;
+        cin >> n;
+        // 根据题目，n >= 2；若出现 n=1 可特殊处理
+        if (n == 1) {
+            cout << 1 << '\n';
+            continue;
+        }
+        if (is_prime(n)) {
+            cout << "Prime" << '\n';
+        } else {
+            max_factor = 0;
+            factor(n);
+            cout << max_factor << '\n';
+        }
+    }
+    return 0;
 }
 ```
 
